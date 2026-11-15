@@ -1,51 +1,37 @@
-# SatriaReal Market
+# SatriaReal Market v2.3.0
 
-Aplikasi toko + chat. **Jalankan dengan Node.js di VPS / PC** (`npm start`), bukan Vercel serverless.
+Marketplace + chat + status camera + order QRIS + panel developer + Yuki AI.
+Jalan di **VPS / Termux (Node.js >= 18)**, kode disimpan di GitHub. Tidak memakai Vercel.
 
-## Persyaratan
-
-- Node.js 18+ (disarankan 20+)
-- Git (untuk clone dari GitHub)
-
-## Setup cepat
-
+## Jalankan
 ```bash
 git clone https://github.com/USERNAME/satriareal.git
 cd satriareal
-cp .env.example .env
-nano .env
 npm install
-npm start
+cp .env.example .env     # isi SMTP, GATEWAY_SECRET, dll
+npm start                # http://localhost:3000
 ```
 
-Buka: `http://localhost:3000` atau `http://IP-SERVER:3000`
+Termux: `pkg install nodejs git` dulu, lalu langkah di atas.
 
-## Environment (`.env`)
-
-| Variabel | Wajib | Keterangan |
-|----------|-------|------------|
-| `GATEWAY_SECRET` | ya | Kunci API (otomatis di-inject ke HTML) |
-| `PORT` | tidak | Default `3000` |
-| `SMTP_*` | untuk OTP | Email kode verifikasi |
-| `NAMA_TOKO`, `WA_ORDER`, ... | tidak | Data toko |
-
-## Tetap hidup di VPS (PM2)
-
+## Agar tetap hidup
 ```bash
-sudo npm i -g pm2
+npm i -g pm2
 pm2 start server.js --name satriareal
-pm2 save
-pm2 startup
+pm2 save && pm2 startup
 ```
+Termux: `pm2 start server.js` lalu `termux-wake-lock` agar tidak dimatikan sistem.
+
+## HTTPS (wajib untuk kamera, mic, video call)
+Browser hanya mengizinkan kamera/mic di HTTPS. Pakai Caddy (`reverse_proxy localhost:3000`) atau
+`cloudflared tunnel --url http://localhost:3000` untuk Termux.
 
 ## Fitur
+- Cuaca di samping baterai (mock; isi `WEATHER_API_KEY` untuk OpenWeatherMap)
+- Yuki AI `/api/yuki`: OpenAI, Groq, DeepSeek, lalu mock
+- Ban user dan Bot pairing di Developer Panel (`/api/ban`, `/api/bot`), data tersimpan di `data/`
+- Chat realtime lewat Socket.IO
 
-- Halaman toko dilayani Express
-- API order / OTP / config
-- Socket.IO chat (jalan selama proses Node hidup)
-
-## Catatan
-
-- Folder `data/` dibuat otomatis untuk JSON
-- Jangan commit `.env` (sudah di `.gitignore`)
-- Mode utama: `node server.js` / `npm start`
+## Keamanan
+- Jangan commit `.env` (sudah di `.gitignore`).
+- Isi `GATEWAY_SECRET` agar API ban/bot tidak terbuka untuk umum.

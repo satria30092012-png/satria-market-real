@@ -1,9 +1,5 @@
-// Vercel injects Environment Variables; local development may use .env in project root.
-try {
-  require('dotenv').config({ path: require('path').join(__dirname, '.env') });
-} catch (e) {
-  console.warn('[dotenv]', e && e.message);
-}
+try { require('dotenv').config({ path: require('path').join(__dirname, '.env') }); } catch (e) {}
+
 const express = require('express');
 const http = require('http');
 const path = require('path');
@@ -12,24 +8,23 @@ const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const { otpEmailHTML } = require('./email-templates');
 
-const PORT = Number(process.env.PORT || process.env.GATEWAY_PORT || 3000);
-const SECRET = process.env.GATEWAY_SECRET || crypto.randomBytes(32).toString('hex');
+const PORT = Number(process.env.PORT || 3000);
+const SECRET = process.env.GATEWAY_SECRET || '';
+const NO_AUTH = !SECRET;
+const SIGN_KEY = SECRET || process.env.JWT_SECRET || 'satria-no-secret';
 const NODE_ID = process.env.NODE_ID || `pid${process.pid}`;
 const ROOT = __dirname;
 
-// PERBAIKAN VERCEL: Gunakan /tmp untuk direktori data karena filesystem Vercel bersifat read-only
-const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
-const DATA_DIR = isVercel ? path.join('/tmp', 'data') : (process.env.DATA_DIR || path.join(ROOT, 'data'));
-const memStore = {};
-let fsWritable = false;
+const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, 'data');
+let fsWritable = true;
 try {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   fs.accessSync(DATA_DIR, fs.constants.W_OK);
-  fsWritable = true;
 } catch {
-  console.warn('[storage] Menggunakan in-memory / tmp (read-only filesystem)');
+  console.warn('[storage] Read-only filesystem, pakai in-memory');
   fsWritable = false;
 }
+const memStore = {};
 
 function readJson(name, def = []) {
   if (!fsWritable) return memStore[name] ?? def;
@@ -42,34 +37,52 @@ function writeJson(name, d) {
     const tmp = path.join(DATA_DIR, `${name}.tmp.${process.pid}.${Date.now()}`);
     fs.writeFileSync(tmp, JSON.stringify(d, null, 2));
     fs.renameSync(tmp, path.join(DATA_DIR, name));
-  } catch (e) {
-    memStore[name] = d;
-  }
+  } catch (e) { memStore[name] = d; }
 }
 
 const app = express();
 const server = http.createServer(app);
 
-// Socket.IO needs a long-lived process. Constructing it on Vercel attaches an
-// engine that throws during the serverless request and crashes the function
-// (500 FUNCTION_INVOCATION_FAILED). Only start it off Vercel.
-let io = null;
-if (!isVercel) {
-  const { Server } = require('socket.io');
-  io = new Server(server, {
-    path: '/socket.io',
-    cors: { origin: process.env.ALLOWED_ORIGINS?.split(',') || '*', credentials: false },
-    maxHttpBufferSize: 15 * 1024 * 1024
-  });
-}
+// ===== CORS untuk GitHub Pages =====
+const allowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (!origin || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization,X-Satria-Key');
+  }
+  if (req.method === 'OPTIONS') return res.sendStatus(204);
+  next();
+});
 
 app.use(express.json({ limit: '15mb' }));
 
-// The supplied project keeps index.html at the repository root.
-const publicDir = path.join(ROOT, 'public');
-const finalPublicDir = fs.existsSync(publicDir) ? publicDir : ROOT;
+// ===== Socket.IO =====
+let io = null;
+try {
+  const { Server } = require('socket.io');
+  io = new Server(server, {
+    path: '/socket.io',
+    cors: {
+      origin: allowedOrigins.includes('*') ? true : allowedOrigins,
+      credentials: true
+    },
+    maxHttpBufferSize: 15 * 1024 * 1024
+  });
+} catch (e) {
+  console.error('[socket.io] gagal init:', e.message);
+}
 
 function authMw(req, res, next) {
+  if (NO_AUTH) return next();
   const k = req.headers['x-satria-key'] || req.query.key ||
             (req.headers['authorization'] || '').replace(/^Bearer /, '');
   if (k === SECRET) return next();
@@ -79,7 +92,7 @@ function authMw(req, res, next) {
 app.get('/api/health', (req, res) =>
   res.json({ ok: true, id: NODE_ID, uptime: process.uptime(), ts: Date.now() }));
 
-app.get('/api/config', authMw, (req, res) => res.json({
+app.get('/api/config', (req, res) => res.json({
   NAMA_TOKO: process.env.NAMA_TOKO || 'SATRIA REAL MARKET',
   WA_ORDER: process.env.WA_ORDER || '',
   TG_ADMIN: process.env.TG_ADMIN || '',
@@ -119,42 +132,30 @@ function ipLimit(req, res, next) {
   let h = ipHits.get(ip);
   if (!h || now - h.start > OTP_WINDOW) h = { start: now, n: 0 };
   h.n++; ipHits.set(ip, h);
-  if (h.n > 40) {
-    return res.status(429).json({ ok: false, code: 'rate', msg: 'Terlalu banyak permintaan, coba lagi nanti', retryAfter: Math.ceil((h.start + OTP_WINDOW - now) / 1000) });
-  }
+  if (h.n > 60) return res.status(429).json({ ok: false, code: 'rate', msg: 'Terlalu banyak permintaan' });
   next();
 }
-const janitor = setInterval(() => {
-  const now = Date.now();
-  for (const [k, v] of otpStore) if (v.expires < now && now - v.firstAt > OTP_WINDOW) otpStore.delete(k);
-  for (const [k, v] of ipHits) if (now - v.start > OTP_WINDOW) ipHits.delete(k);
-}, 5 * 60000);
-if (typeof janitor.unref === 'function') janitor.unref();
 
 function smtpMsg(e) {
   const c = e && e.code;
-  if (c === 'EAUTH') return 'Login SMTP ditolak. Cek SMTP_USER / SMTP_PASS (Gmail wajib App Password).';
-  if (c === 'ECONNECTION' || c === 'ETIMEDOUT' || c === 'ESOCKET' || c === 'EDNS') return 'Server tidak bisa konek ke SMTP. Cek SMTP_HOST / SMTP_PORT / koneksi.';
+  if (c === 'EAUTH') return 'Login SMTP ditolak. Cek SMTP_USER / SMTP_PASS.';
+  if (c === 'ECONNECTION' || c === 'ETIMEDOUT' || c === 'ESOCKET' || c === 'EDNS') return 'Tidak bisa konek SMTP.';
   return 'Email gagal terkirim: ' + (e && e.message ? e.message : 'unknown');
 }
 
 app.post('/api/otp/send', ipLimit, async (req, res) => {
   try {
     const email = String((req.body || {}).email || '').trim().toLowerCase();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
-      return res.status(400).json({ ok: false, code: 'bad', msg: 'Email tidak valid' });
-    if (!transporter)
-      return res.status(500).json({ ok: false, code: 'smtp', msg: 'SMTP belum diset di server (.env)' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ ok: false, msg: 'Email tidak valid' });
+    if (!transporter) return res.status(500).json({ ok: false, msg: 'SMTP belum diset di server' });
 
     const now = Date.now();
     let ex = otpStore.get(email);
     if (ex && now - ex.firstAt > OTP_WINDOW) ex = null;
     if (ex) {
       const wait = Math.ceil((ex.lastAt + OTP_COOLDOWN * 1000 - now) / 1000);
-      if (wait > 0)
-        return res.status(429).json({ ok: false, code: 'cooldown', msg: `Tunggu ${wait} detik sebelum kirim ulang`, retryAfter: wait });
-      if (ex.sentCount >= OTP_MAX_SEND)
-        return res.status(429).json({ ok: false, code: 'limit', msg: 'Terlalu sering minta kode. Coba lagi beberapa menit lagi.', retryAfter: Math.ceil((ex.firstAt + OTP_WINDOW - now) / 1000) });
+      if (wait > 0) return res.status(429).json({ ok: false, msg: `Tunggu ${wait} detik`, retryAfter: wait });
+      if (ex.sentCount >= OTP_MAX_SEND) return res.status(429).json({ ok: false, msg: 'Terlalu sering, coba lagi nanti' });
     }
 
     let code = '';
@@ -168,8 +169,8 @@ app.post('/api/otp/send', ipLimit, async (req, res) => {
         html: otpEmailHTML({ code, email, expiryMin: OTP_EXPIRY / 60000 })
       });
     } catch (e) {
-      console.error('[otp] sendMail gagal:', e.code || '', e.message);
-      return res.status(502).json({ ok: false, code: 'mail', msg: smtpMsg(e) });
+      console.error('[otp] sendMail gagal:', e.code, e.message);
+      return res.status(502).json({ ok: false, msg: smtpMsg(e) });
     }
 
     otpStore.set(email, {
@@ -178,27 +179,39 @@ app.post('/api/otp/send', ipLimit, async (req, res) => {
     });
     res.json({ ok: true, msg: 'Terkirim', expiresIn: OTP_EXPIRY / 1000, cooldown: OTP_COOLDOWN, length: OTP_LEN });
   } catch (e) {
-    console.error('[otp] error:', e);
-    res.status(500).json({ ok: false, code: 'err', msg: `Gagal: ${e.message}` });
+    console.error('[otp]', e);
+    res.status(500).json({ ok: false, msg: e.message });
   }
 });
 
 app.post('/api/otp/verify', ipLimit, (req, res) => {
   const email = String((req.body || {}).email || '').trim().toLowerCase();
   const code = String((req.body || {}).code || '').trim();
-  if (!email || !code) return res.status(400).json({ ok: false, code: 'bad', msg: 'Wajib diisi' });
+  if (!email || !code) return res.status(400).json({ ok: false, msg: 'Wajib diisi' });
   const rec = otpStore.get(email);
-  if (!rec || !rec.code) return res.status(404).json({ ok: false, code: 'none', msg: 'Kode tidak ditemukan, kirim ulang kode' });
-  if (rec.expires < Date.now()) { rec.code = null; return res.status(410).json({ ok: false, code: 'expired', msg: 'Kode kadaluarsa, kirim ulang kode' }); }
-  if (rec.tries >= 5) { rec.code = null; return res.status(429).json({ ok: false, code: 'tries', msg: 'Terlalu banyak salah, kirim ulang kode' }); }
+  if (!rec || !rec.code) return res.status(404).json({ ok: false, msg: 'Kode tidak ditemukan' });
+  if (rec.expires < Date.now()) { rec.code = null; return res.status(410).json({ ok: false, msg: 'Kode kadaluarsa' }); }
+  if (rec.tries >= 5) { rec.code = null; return res.status(429).json({ ok: false, msg: 'Terlalu banyak salah' }); }
   rec.tries++;
-  if (rec.code !== code) return res.status(401).json({ ok: false, code: 'wrong', msg: `Kode salah (${5 - rec.tries}x lagi)` });
+  if (rec.code !== code) return res.status(401).json({ ok: false, msg: `Kode salah (${5 - rec.tries}x lagi)` });
   rec.code = null;
   const payload = Buffer.from(`${email}:${Date.now()}`).toString('base64url');
-  const sig = crypto.createHmac('sha256', SECRET).update(payload).digest('base64url');
+  const sig = crypto.createHmac('sha256', SIGN_KEY).update(payload).digest('base64url');
   res.json({ ok: true, token: `${payload}.${sig}`, email });
 });
 
+// ===== API modules =====
+['yuki', 'ban', 'bot'].forEach((n) => {
+  try {
+    const h = require('./api/' + n + '.js');
+    app.all('/api/' + n, ipLimit, h);
+    console.log('[api] loaded:', n);
+  } catch (e) {
+    console.error('[api/' + n + '] gagal load:', e.message);
+  }
+});
+
+// ===== Orders =====
 app.get('/api/orders', authMw, (req, res) => res.json(readJson('orders.json', [])));
 
 app.post('/api/orders', authMw, (req, res) => {
@@ -226,18 +239,11 @@ app.get('/api/spending/:email', authMw, (req, res) => {
   res.json(sp[req.params.email] || { total: 0, count: 0, history: [] });
 });
 
-// Otomatis inject GATEWAY_SECRET ke index.html agar API key sinkron otomatis
+// ===== Serve index.html =====
 function findIndexHtml() {
-  const candidates = [
-    path.join(finalPublicDir, 'index.html'),
-    path.join(ROOT, 'index.html'),
-    path.join(process.cwd(), 'index.html'),
-    path.join(__dirname, 'index.html'),
-  ];
+  const candidates = [path.join(ROOT, 'index.html'), path.join(process.cwd(), 'index.html')];
   for (const p of candidates) {
-    try {
-      if (fs.existsSync(p) && fs.statSync(p).isFile()) return p;
-    } catch (_) {}
+    try { if (fs.existsSync(p) && fs.statSync(p).isFile()) return p; } catch (_) {}
   }
   return null;
 }
@@ -245,29 +251,20 @@ function findIndexHtml() {
 function serveIndex(req, res) {
   try {
     const idxPath = findIndexHtml();
-    if (!idxPath) {
-      return res.status(404).type('text/plain').send('index.html not found');
-    }
+    if (!idxPath) return res.status(404).type('text/plain').send('index.html not found');
     let html = fs.readFileSync(idxPath, 'utf8');
-    // Escape so a secret with quotes cannot break the inline script.
-    const safeSecret = String(SECRET).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    html = html.replace("'GANTI-DENGAN-GATEWAY_SECRET-DARI-.env-VPS'", `'${safeSecret}'`);
+    const esc = (v) => String(v || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g, '\\x3c');
+    html = html.replace(/window\.__SATRIA_KEY__\s*=\s*'[^']*'/, () => `window.__SATRIA_KEY__ = '${esc(SECRET)}'`);
+    html = html.replace(/window\.__WEATHER_KEY__\s*=\s*'[^']*'/, () => `window.__WEATHER_KEY__ = '${esc(process.env.WEATHER_API_KEY)}'`);
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
     return res.status(200).send(html);
   } catch (e) {
     console.error('[serveIndex]', e);
-    if (!res.headersSent) {
-      res.status(500).json({ ok: false, msg: 'serveIndex failed', detail: e && e.message });
-    }
+    res.status(500).json({ ok: false, msg: e.message });
   }
 }
 
-if (fs.existsSync(publicDir)) {
-  app.use(express.static(publicDir));
-}
-
-// Explicit routes — app.get('*') can throw on some Express/path-to-regexp builds
 app.get('/', serveIndex);
 app.get('/index.html', serveIndex);
 
@@ -276,23 +273,14 @@ app.use((req, res, next) => {
   if (req.path.startsWith('/api/') || req.path.startsWith('/socket.io/')) {
     return res.status(404).json({ ok: false, msg: 'not found' });
   }
-  // Do not expose server source, .env, or data files from ROOT.
-  if (finalPublicDir !== ROOT) {
-    try {
-      const filePath = path.join(finalPublicDir, req.path);
-      if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-        return res.sendFile(filePath);
-      }
-    } catch (_) {}
-  }
   return serveIndex(req, res);
 });
 
-// Socket.IO (local / VPS only)
+// ===== Socket.IO =====
 if (io) {
   io.use((socket, next) => {
     const k = socket.handshake.auth?.key || socket.handshake.headers['x-satria-key'] || socket.handshake.query?.key;
-    if (k !== SECRET) return next(new Error('Unauthorized'));
+    if (!NO_AUTH && k !== SECRET) return next(new Error('Unauthorized'));
     next();
   });
 
@@ -316,11 +304,11 @@ if (io) {
   });
 }
 
-const shouldListen = require.main === module || process.env.START_SERVER === '1';
-if (shouldListen) {
-  server.listen(PORT, '0.0.0.0', () => {
-    console.log(`SatriaReal Jalan di port :${PORT}`);
-  });
-}
+// ===== Start server =====
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ SatriaReal jalan di port :${PORT}`);
+  console.log(`   Auth mode: ${NO_AUTH ? 'DEMO (no secret)' : 'AKTIF'}`);
+  console.log(`   CORS allow: ${allowedOrigins.join(', ') || '*'}`);
+});
 
 module.exports = { app, server, io };

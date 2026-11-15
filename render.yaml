@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: satriareal-backend
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: FRONTEND_URL
+        sync: false
+      - key: GATEWAY_SECRET
+        sync: false
+      - key: NAMA_TOKO
+        value: SATRIA REAL MARKET
+      - key: WA_ORDER
+        sync: false
+      - key: TG_ADMIN
+        sync: false
+      - key: QRIS_IMAGE
+        sync: false
+      - key: MUSIC_URL
+        sync: false
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_SECURE
+        value: "false"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: WEATHER_API_KEY
+        sync: false
+      - key: DEV_USERNAME
+        sync: false
+      - key: DEV_EMAIL
+        sync: false
+      - key: DEV_PASSWORD
+        sync: false
