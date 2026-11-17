@@ -45,3 +45,13 @@ services:
         sync: false
       - key: DEV_PASSWORD
         sync: false
+      - key: DEV_PUBLIC_NAME
+        sync: false
+      - key: WA_PROVIDER
+        sync: false
+      - key: WA_GATEWAY_URL
+        sync: false
+      - key: WA_GATEWAY_TOKEN
+        sync: false
+      - key: TZ
+        value: Asia/Jakarta

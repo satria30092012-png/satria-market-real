@@ -1,13 +1,14 @@
 {
   "name": "satriareal",
-  "version": "2.4.0",
+  "version": "3.0.0",
   "description": "SatriaReal Market — marketplace, chat, status camera, order QRIS, owner panel & Yuki AI",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "node --test tests/core.test.js tests/routes.test.js",
+    "test:e2e": "node tests/e2e.js"
   },
   "dependencies": {
-    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "nodemailer": "^6.9.14",

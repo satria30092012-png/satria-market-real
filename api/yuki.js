@@ -1,3 +1,4 @@
+const auth = require('../lib/auth');
 const SYSTEM_PROMPT =
   "Kamu adalah Yuki (❄️), asisten AI di SatriaReal Market. Ramah, cerdas, tenang, efisien. " +
   "Panggil user 'kamu' (netral). Bahasa Indonesia santai, ganti ke English kalau user pakai English. " +
@@ -26,7 +27,7 @@ async function readBody(req) {
 }
 function mockReply(msg) {
   const m = msg.toLowerCase();
-  if (/(halo|hai|hi|hello|pagi|siang|malam)/.test(m)) return 'Halo! Aku Yuki ❄️. Mau tanya produk, harga, atau cara order?';
+  if (/\b(halo|hai|hi|hello|pagi|siang|malam)\b/.test(m)) return 'Halo! Aku Yuki ❄️. Mau tanya produk, harga, atau cara order?';
   if (/(produk|katalog|jual|tersedia)/.test(m)) return 'Semua produk ada di menu Katalog. Buka Katalog, pilih produk, lalu tekan Order ya ❄️';
   if (/(harga|biaya|berapa)/.test(m)) return 'Harga tiap produk tertera di kartu produk di Katalog, tergantung paket yang kamu pilih.';
   if (/(order|pesan|beli|cara)/.test(m)) return 'Cara order: pilih produk, pilih paket, isi form, terapkan voucher kalau ada, bayar via QRIS, lalu konfirmasi.';
@@ -54,12 +55,14 @@ module.exports = async (req, res) => {
   try {
     if (req.method === 'OPTIONS') return send(res, 204, {});
     if (req.method !== 'POST') return send(res, 405, { ok: false, msg: 'Method not allowed' });
+    const sess = auth.fromReq(req);
+    if (!sess || (sess.role !== 'user' && sess.role !== 'dev')) return send(res, 401, { ok: false, msg: 'Login dulu untuk chat dengan Yuki' });
     const body = await readBody(req);
     const message = typeof body.message === 'string' ? body.message.trim() : '';
     if (!message) return send(res, 400, { ok: false, msg: 'Pesan kosong' });
     if (message.length > 1000) return send(res, 400, { ok: false, msg: 'Pesan max 1000 karakter' });
 
-    const ip = clientIp(req), now = Date.now();
+    const ip = String(sess.sub || clientIp(req)), now = Date.now();
     if (hits.size > 500) hits.clear();
     if (now - (hits.get(ip) || 0) < 2000) return send(res, 429, { ok: false, msg: 'Pelan-pelan ya, tunggu 2 detik ❄️' });
     hits.set(ip, now);

@@ -37,7 +37,8 @@
   var s = document.createElement('script');
   s.src = window.__SOCKET_URL__ ? (window.__SOCKET_URL__ + '/socket.io/socket.io.js') : '/socket.io/socket.io.js';
   s.async = true;
-  s.onerror = function(){};
+  s.onload = function(){ window.__ioLoaded = true; try { if(window.reconnectSocket) window.reconnectSocket(); } catch(e){} };
+  s.onerror = function(){ console.warn('[socket] klien socket.io gagal dimuat'); };
   document.head.appendChild(s);
 })();
 </script>
@@ -1018,10 +1019,10 @@ header.fixed,nav.fixed{
   <div class="bg-white rounded-t-2xl sm:rounded-xl p-5 w-full max-w-sm border-2 border-black shadow-xl max-h-[85vh] flex flex-col" onclick="event.stopPropagation()">
     <h3 class="font-bold text-lg mb-3">Cari / Pilih User</h3>
     <form onsubmit="event.preventDefault();mulaiChatBaru();" class="w-full shrink-0">
-      <input type="text" id="new-chat-username" placeholder="Ketik username..." class="w-full p-2 border rounded-lg mb-3 text-sm" required>
+      <input type="text" id="new-chat-username" placeholder="Ketik username..." oninput="cariUserChat(this.value)" autocomplete="off" autocapitalize="none" spellcheck="false" maxlength="40" class="w-full p-2 border rounded-lg mb-3 text-sm" required>
       <div class="flex gap-2"><button type="submit" class="flex-1 bg-green-500 text-white py-2 rounded-lg font-bold">Mulai</button><button type="button" onclick="tutupModal('#modal-new-chat')" class="flex-1 bg-gray-300 text-gray-800 py-2 rounded-lg font-bold">Batal</button></div>
     </form>
-    <p class="text-xs font-black text-gray-500 uppercase mt-4 mb-2 shrink-0">Atau pilih:</p>
+    <p class="text-xs font-black text-gray-500 uppercase mt-4 mb-2 shrink-0">Hasil pencarian:</p>
     <div id="new-chat-user-list" class="overflow-y-auto flex-1 space-y-2 pr-1"></div>
   </div>
 </div>
@@ -1036,7 +1037,7 @@ header.fixed,nav.fixed{
   <div id="call-video-area" class="flex-1 relative flex flex-col items-center justify-center w-full overflow-hidden">
     <video id="remote-video" autoplay playsinline class="w-full h-full object-cover hidden"></video>
     <video id="local-video" autoplay muted playsinline class="absolute bottom-4 right-4 w-32 h-48 bg-gray-800 border-2 border-white rounded-lg object-cover hidden cursor-pointer shadow-lg"></video>
-    <div id="call-info" class="text-center z-10 p-6 bg-black/50 rounded-2xl border border-gray-700"><h2 id="call-name" class="text-white text-2xl font-bold mb-2">Memanggil...</h2><p id="call-status" class="text-gray-400">Menunggu jawaban...</p><p class="text-white/50 text-xs mt-3">Tap / Swipe untuk ganti kamera</p></div>
+    <div id="call-info" class="text-center z-10 p-6 bg-black/50 rounded-2xl border border-gray-700"><h2 id="call-name" class="text-white text-2xl font-bold mb-2">Memanggil...</h2><p id="call-status" class="text-gray-400">Menunggu jawaban...</p><p class="text-white/50 text-xs mt-3">Ketuk / geser untuk ganti kamera</p></div>
     <div class="absolute top-4 right-4 z-20 flex gap-2"><button id="btn-flip-camera" onclick="flipCamera()" class="w-12 h-12 bg-white/20 backdrop-blur rounded-full flex items-center justify-center text-white hidden"><svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></button><button id="btn-toggle-video" onclick="toggleVideo()" class="w-12 h-12 bg-white/20 backdrop-blur rounded-full flex items-center justify-center text-white hidden"><svg id="icon-toggle-video" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg></button></div>
   </div>
   <div class="p-8 flex justify-center gap-6 bg-black w-full"><button onclick="akhiriPanggilan()" class="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center text-white text-2xl shadow-lg"><i class="ph-bold ph-x"></i></button></div>
@@ -1105,7 +1106,7 @@ header.fixed,nav.fixed{
           <button data-theme-target="merah" class="theme-choice-btn w-full neo-btn bg-white p-2 rounded flex items-center gap-2 text-xs font-bold text-left"><span class="w-4 h-4 rounded-full border-2 border-black bg-red-500"></span>Merah</button>
           <button data-theme-target="kuning" class="theme-choice-btn w-full neo-btn bg-white p-2 rounded flex items-center gap-2 text-xs font-bold text-left"><span class="w-4 h-4 rounded-full border-2 border-black bg-yellow-400"></span>Kuning</button>
           <button data-theme-target="pink" class="theme-choice-btn w-full neo-btn bg-white p-2 rounded flex items-center gap-2 text-xs font-bold text-left"><span class="w-4 h-4 rounded-full border-2 border-black bg-pink-400"></span>Pink</button>
-          <button data-theme-target="orange" class="theme-choice-btn w-full neo-btn bg-white p-2 rounded flex items-center gap-2 text-xs font-bold text-left"><span class="w-4 h-4 rounded-full border-2 border-black bg-orange-500"></span>Orange</button>
+          <button data-theme-target="orange" class="theme-choice-btn w-full neo-btn bg-white p-2 rounded flex items-center gap-2 text-xs font-bold text-left"><span class="w-4 h-4 rounded-full border-2 border-black bg-orange-500"></span>Oranye</button>
           <button data-theme-target="cyan" class="theme-choice-btn w-full neo-btn bg-white p-2 rounded flex items-center gap-2 text-xs font-bold text-left"><span class="w-4 h-4 rounded-full border-2 border-black bg-cyan-400"></span>Cyan</button>
           <button data-theme-target="dark" class="theme-choice-btn w-full neo-btn bg-white p-2 rounded flex items-center gap-2 text-xs font-bold text-left"><span class="w-4 h-4 rounded-full border-2 border-black bg-gray-900"></span>Dark</button>
           <button data-theme-target="slate" class="theme-choice-btn w-full neo-btn bg-white p-2 rounded flex items-center gap-2 text-xs font-bold text-left"><span class="w-4 h-4 rounded-full border-2 border-black bg-slate-400"></span>Slate</button>
@@ -1170,7 +1171,7 @@ header.fixed,nav.fixed{
   <button id="btn-close-pembayaran" class="absolute top-4 right-4 neo-btn bg-white hover:bg-red-300 w-8 h-8 rounded-full flex items-center justify-center z-10"><i class="ph-bold ph-x"></i></button>
   <span class="inline-flex px-3 py-1 bg-emerald-300 border-2 border-black rounded-full text-[10px] font-black uppercase mt-1">QRIS</span>
   <h3 class="font-display font-black text-xl mt-3">Scan QRIS</h3>
-  <div class="qr-frame my-5 bg-white p-3 rounded-2xl border-2 border-black inline-block shadow-md"><img id="img-qris" src="" alt="QRIS" class="w-48 h-48 object-contain block mx-auto"></div>
+  <div class="qr-frame my-5 bg-white p-3 rounded-2xl border-2 border-black inline-block shadow-md"><img id="img-qris" alt="QRIS" referrerpolicy="no-referrer" class="w-48 h-48 object-contain block mx-auto"><div id="qris-fallback" style="display:none" class="w-48 h-48 items-center justify-center text-center text-xs font-black p-3 mx-auto">QRIS gagal dimuat. Tekan tombol konfirmasi, admin akan mengirim QR lewat WhatsApp.</div></div>
   <p class="text-[10px] font-black text-gray-500 uppercase mb-1">Total</p>
   <p class="font-display font-black text-3xl text-emerald-600 mb-4" id="pay-total">Rp0</p>
   <div class="bg-gray-50 border-2 border-black rounded-xl p-4 text-left text-xs font-medium mb-5 space-y-2"><div class="flex justify-between"><span class="text-gray-500">Barang</span><span class="font-bold" id="pay-produk">-</span></div><div class="flex justify-between"><span class="text-gray-500">Paket</span><span class="font-bold" id="pay-paket">-</span></div><div class="flex justify-between" id="pay-voucher-row" style="display:none"><span class="text-gray-500">Voucher</span><span class="font-bold text-emerald-600" id="pay-voucher">-</span></div></div>
@@ -1188,15 +1189,44 @@ header.fixed,nav.fixed{
 'use strict';
 
 const API_BASE   = window.__SATRIA_API__ || '';
-const API_KEY    = window.__SATRIA_KEY__ || '';
 const SOCKET_URL = window.__SOCKET_URL__ || '';
 const apiUrl     = (p) => API_BASE + p;
-const apiFetch   = (p, opts = {}) => {
-  return fetch(apiUrl(p), {
-    ...opts,
-    headers: { 'Content-Type': 'application/json', 'X-Satria-Key': API_KEY, ...(opts.headers || {}) }
-  });
+
+// ===== Zona waktu: semua tampilan jam dikunci ke WIB (Asia/Jakarta, UTC+7), tidak peduli jam/zona HP =====
+const TZ = 'Asia/Jakarta';
+let CLOCK_OFFSET = 0; // selisih jam server (WIB) dan jam perangkat; diisi dari /api/config
+const nowMs = () => Date.now() + CLOCK_OFFSET;
+const wibParts = (t) => {
+  const o = {};
+  new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    .formatToParts(new Date(t == null ? nowMs() : t)).forEach((x) => { o[x.type] = x.value; });
+  return o;
 };
+const wibFmt  = (t, o) => new Date(t == null ? nowMs() : t).toLocaleString('id-ID', Object.assign({ timeZone: TZ }, o || {}));
+const wibTime = (t) => { const p = wibParts(t); return p.hour + ':' + p.minute; };
+const wibFull = (t) => { const p = wibParts(t); return p.day + '/' + p.month + '/' + p.year + ' ' + p.hour + ':' + p.minute + ' WIB'; };
+
+// ===== Sesi (token bertanda tangan dari server; tidak ada kunci rahasia di sisi klien) =====
+function tokenPayload(t){ try { return JSON.parse(atob(String(t).split('.')[0].replace(/-/g, '+').replace(/_/g, '/'))); } catch(e){ return null; } }
+const Sess = {
+  user: () => { try { return localStorage.getItem('fr_token') || ''; } catch(e){ return ''; } },
+  setUser: (t) => { try { if(t) localStorage.setItem('fr_token', t); else localStorage.removeItem('fr_token'); } catch(e){} },
+  dev: () => { try { const t = sessionStorage.getItem('fr_dev_token') || ''; const p = tokenPayload(t); return (p && p.exp * 1000 > Date.now()) ? t : ''; } catch(e){ return ''; } },
+  setDev: (t) => { try { if(t) sessionStorage.setItem('fr_dev_token', t); else sessionStorage.removeItem('fr_dev_token'); } catch(e){} }
+};
+const ADMIN_RE = /^\/api\/(ban|bot)(\?(?!check=)|$)/;
+const apiFetch = async (p, opts = {}) => {
+  const method = String(opts.method || 'GET').toUpperCase();
+  const admin = ADMIN_RE.test(p) || (p === '/api/orders' && method === 'GET');
+  const tok = admin ? (Sess.dev() || Sess.user()) : (Sess.user() || Sess.dev());
+  const res = await fetch(apiUrl(p), {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: 'Bearer ' + tok } : {}), ...(opts.headers || {}) }
+  });
+  if(res.status === 401 && tok && tok === Sess.user() && !/^\/api\/(auth\/login|otp|auth\/register)/.test(p)){ try { onSessionExpired(); } catch(e){} }
+  return res;
+};
+let WA_OTP_ON = false;
 
 let ENV = {
   NAMA_TOKO: "SATRIA REAL MARKET",
@@ -1206,18 +1236,20 @@ let ENV = {
   MUSIC_URL: "https://files.catbox.moe/662im9.mp3",
   FOTO_PRODUK: {}
 };
-let DEVELOPER = { username: 'satria', email: 'fajarsatria30092012@gmail.com', password: '30092012' };
+let DEVELOPER = { username: '' }; // hanya nama tampilan publik (lencana verified); kredensial ada di server
 let SERVER_ONLINE = false;
 
 async function loadConfig() {
   try {
     const res = await apiFetch('/api/config');
-    if (res.ok) {
-      const data = await res.json();
-      ENV = Object.assign({}, ENV, data);
-      if (data.DEVELOPER && data.DEVELOPER.username) DEVELOPER = data.DEVELOPER;
-      SERVER_ONLINE = true;
-    } else { throw new Error('not ok'); }
+    if (!res.ok) throw new Error('not ok');
+    const data = await res.json();
+    // Nilai kosong TIDAK boleh menimpa default (inilah penyebab QR/QRIS hilang sebelumnya)
+    Object.keys(data).forEach((k) => { const v = data[k]; if (v !== '' && v != null) ENV[k] = v; });
+    if (data.serverTime) { const t = Date.parse(data.serverTime); if (!isNaN(t)) CLOCK_OFFSET = t - Date.now(); }
+    if (data.DEV_PUBLIC_NAME) DEVELOPER.username = data.DEV_PUBLIC_NAME;
+    WA_OTP_ON = !!data.waOtp;
+    SERVER_ONLINE = true;
   } catch(e) { SERVER_ONLINE = false; }
 }
 
@@ -1232,11 +1264,11 @@ const DB = {
   savePrices: (p) => { try { localStorage.setItem('fr_prices', JSON.stringify(p)); } catch(e) {} },
   currentUser: () => { try { return JSON.parse(localStorage.getItem('fr_current_user') || 'null'); } catch(e) { return null; } },
   setCurrentUser: (u) => { try { localStorage.setItem('fr_current_user', JSON.stringify(u)); } catch(e) {} },
-  logout: () => { try { localStorage.removeItem('fr_current_user'); } catch(e) {} },
+  logout: () => { try { localStorage.removeItem('fr_current_user'); } catch(e) {} Sess.setUser(''); },
   getVisitors: () => Number(localStorage.getItem('fr_visitors') || 0),
   incrementVisitors: () => { try { const v = DB.getVisitors() + 1; localStorage.setItem('fr_visitors', v); return v; } catch(e) { return 0; } },
-  isOwner: () => localStorage.getItem('fr_owner') === 'true',
-  setOwner: (v) => { try { if(v) localStorage.setItem('fr_owner', 'true'); else localStorage.removeItem('fr_owner'); } catch(e) {} },
+  isOwner: () => !!Sess.dev(),
+  setOwner: (v) => { if(!v) Sess.setDev(''); },
   getChat: () => { try { return JSON.parse(localStorage.getItem('fr_chat') || '[]'); } catch(e) { return []; } },
   saveChat: (c) => { try { localStorage.setItem('fr_chat', JSON.stringify(c)); } catch(e) {} },
   getPrivateChat: (u1, u2) => { const key = 'fr_chat_private_' + [String(u1), String(u2)].sort().join('_'); try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch(e) { return []; } },
@@ -1508,16 +1540,23 @@ function getStats(){
 }
 
 let socket = null;
+let pendingIce = [];
+async function flushIce(){
+  if(!peerConnection || !peerConnection.remoteDescription) return;
+  const l = pendingIce; pendingIce = [];
+  for(const c of l){ try { await peerConnection.addIceCandidate(new RTCIceCandidate(c)); } catch(e){ console.warn('[vc] ice', e); } }
+}
 function initSocket(){
-  if (typeof io === 'undefined') return;
+  if (typeof io === 'undefined' || socket) return;
+  if (!(Sess.user() || Sess.dev())) return;
   try {
     socket = io(SOCKET_URL || undefined, {
       transports: ['websocket', 'polling'],
-      auth: { key: API_KEY },
+      auth: { token: Sess.user() || Sess.dev() },
       reconnection: true, reconnectionAttempts: 15, reconnectionDelay: 1000
     });
-    const user = DB.currentUser();
-    if (user) socket.emit('join', { username: user.username });
+    socket.on('connect_error', (err) => { if(err && err.message === 'Unauthorized' && DB.currentUser()){ try { onSessionExpired(); } catch(e){} } });
+    socket.on('call-unavailable', () => { toast('<i class="ph-fill ph-warning-circle"></i> User sedang offline, tidak bisa dipanggil','error'); });
     socket.on('chat-message', (data) => {
       const cu = DB.currentUser(); if(!cu) return;
       if(String(data.from || '').toLowerCase() === String(cu.username || '').toLowerCase()) return;
@@ -1531,6 +1570,7 @@ function initSocket(){
       } else {
         if(String(data.roomId).toLowerCase() !== String(cu.username).toLowerCase()) return;
         const partner = data.from;
+        rememberUser({ username: partner });
         const chats = DB.getPrivateChat(cu.username, partner);
         if(!chats.find(c => c.time === data.time && String(c.sender).toLowerCase() === String(data.from).toLowerCase())){
           chats.push({ sender: data.from, text: data.text, type: data.type, time: data.time });
@@ -1561,11 +1601,15 @@ function initSocket(){
     });
     socket.on('incoming-call', (d) => { const cu = DB.currentUser(); if(cu && String(d.from).toLowerCase() !== String(cu.username).toLowerCase()) tampilkanPanggilanMasuk(d.from, d.type, d.signal); });
     socket.on('global-incoming-call', (d) => { const cu = DB.currentUser(); if(cu && String(d.from).toLowerCase() !== String(cu.username).toLowerCase()) tampilkanPanggilanMasuk(d.from + ' (Grup)', d.type, d.signal); });
-    socket.on('call-answered', async (s) => { if(peerConnection) await peerConnection.setRemoteDescription(new RTCSessionDescription(s)); });
-    socket.on('ice-candidate', async (c) => { if(peerConnection) await peerConnection.addIceCandidate(new RTCIceCandidate(c)); });
+    socket.on('call-answered', async (sdp) => { try { if(peerConnection){ await peerConnection.setRemoteDescription(new RTCSessionDescription(sdp)); await flushIce(); } } catch(e){ console.warn('[vc] answer', e); } });
+    socket.on('ice-candidate', async (c) => { if(!c) return; pendingIce.push(c); await flushIce(); });
     socket.on('call-ended', () => { akhiriPanggilanUI(); });
   } catch(e) { console.warn('Socket:', e); }
 }
+window.reconnectSocket = function(){
+  try { if(socket){ socket.disconnect(); socket = null; } } catch(e){}
+  if(typeof io !== 'undefined' && (Sess.user() || Sess.dev())) initSocket();
+};
 
 let currentChatRoom = null, currentChatType = 'global', currentStatusViewing = null;
 
@@ -1602,24 +1646,59 @@ window.switchWATab = function(tab){
   updateNotifBadge();
 };
 
+function rememberUser(u){
+  try {
+    if(!u || !u.username) return;
+    const us = DB.getUsers(); const k = String(u.username).toLowerCase();
+    const i = us.findIndex(x => String(x.username).toLowerCase() === k);
+    const rec = { username: u.username, avatar: u.avatar || (i >= 0 ? us[i].avatar : null) || null };
+    if(i >= 0) us[i] = Object.assign({}, us[i], rec); else us.push(rec);
+    DB.saveUsers(us);
+  } catch(e){}
+}
+async function cariUserApi(q){
+  const r = await apiFetch('/api/users/search?q=' + encodeURIComponent(String(q || '').trim().replace(/^@/, '')));
+  const d = await r.json().catch(() => ({}));
+  if(!r.ok || !d.ok) throw new Error(d.msg || 'Pencarian gagal');
+  (d.data || []).forEach(rememberUser);
+  return d.data || [];
+}
+function tampilHasilUser(list, q){
+  const box = $('#new-chat-user-list'); if(!box) return;
+  if(!list.length){ box.innerHTML = '<p class="text-xs text-gray-500 text-center py-4">' + (q ? 'User "' + escapeHtml(q) + '" tidak ditemukan.' : 'Belum ada user lain.') + '</p>'; return; }
+  box.innerHTML = list.map(u => `<div class="flex items-center gap-2 p-2 border-2 border-black rounded-lg cursor-pointer hover:bg-gray-100" data-user="${escapeHtml(u.username)}"><img src="${getAvatarUrl(u.username,32)}" class="w-8 h-8 rounded-full border border-black object-cover"><span class="font-bold text-sm">${escapeHtml(u.username)}</span></div>`).join('');
+}
+let _cariSeq = 0, _cariTimer = null;
+window.cariUserChat = function(q){
+  clearTimeout(_cariTimer);
+  _cariTimer = setTimeout(async () => {
+    const seq = ++_cariSeq; const box = $('#new-chat-user-list');
+    if(box) box.innerHTML = '<p class="text-xs text-gray-500 text-center py-4">Mencari...</p>';
+    try { const l = await cariUserApi(q); if(seq === _cariSeq) tampilHasilUser(l, String(q || '').trim()); }
+    catch(e){ if(seq === _cariSeq && box) box.innerHTML = '<p class="text-xs text-red-600 text-center py-4">' + escapeHtml(e.message || 'Pencarian gagal') + '</p>'; }
+  }, 250);
+};
 window.bukaChatBaru = function(){
   const user = DB.currentUser(); if(!user){ toast('<i class="ph-fill ph-warning-circle"></i> Login dulu!','error'); return; }
   bukaModal('#modal-new-chat');
-  const list = $('#new-chat-user-list');
-  let users = DB.getUsers().filter(u => u.username !== user.username);
-  if(users.length === 0) list.innerHTML = '<p class="text-xs text-gray-500 text-center py-4">Belum ada user lain.</p>';
-  else list.innerHTML = users.map(u => `<div class="flex items-center gap-2 p-2 border-2 border-black rounded-lg cursor-pointer hover:bg-gray-100" onclick="pilihUserChat('${escapeHtml(u.username)}')"><img src="${getAvatarUrl(u.username,32)}" class="w-8 h-8 rounded-full border border-black object-cover"><span class="font-bold text-sm">${escapeHtml(u.username)}</span></div>`).join('');
+  const box = $('#new-chat-user-list');
+  if(box && !box._bound){ box._bound = true; box.addEventListener('click', (ev) => { const el = ev.target.closest('[data-user]'); if(el) pilihUserChat(el.dataset.user); }); }
+  const inp = $('#new-chat-username'); if(inp) inp.value = '';
+  window.cariUserChat('');
 };
 window.pilihUserChat = function(u){ tutupModal('#modal-new-chat'); bukaChatRoom('private', u); };
-window.mulaiChatBaru = function(){
-  const u = $('#new-chat-username').value.trim();
-  const me = DB.currentUser(); if(!me || !u) return;
-  if(String(u).toLowerCase() === String(me.username).toLowerCase()){ toast('<i class="ph-fill ph-warning-circle"></i> Tidak bisa chat sendiri','error'); return; }
-  const target = DB.getUsers().find(x => String(x.username).toLowerCase() === String(u).toLowerCase());
-  if(!target){ toast('<i class="ph-fill ph-warning-circle"></i> User tidak ditemukan','error'); return; }
-  tutupModal('#modal-new-chat');
-  $('#new-chat-username').value = '';
-  bukaChatRoom('private', target.username);
+window.mulaiChatBaru = async function(){
+  const raw = (($('#new-chat-username') || {}).value || '').trim().replace(/^@/, '');
+  const me = DB.currentUser(); if(!me || !raw) return;
+  if(raw.toLowerCase() === 'yuki'){ tutupModal('#modal-new-chat'); bukaChatRoom('private', 'Yuki'); return; }
+  if(raw.toLowerCase() === String(me.username).toLowerCase()){ toast('<i class="ph-fill ph-warning-circle"></i> Tidak bisa chat dengan diri sendiri','error'); return; }
+  try {
+    const list = await cariUserApi(raw);
+    const target = list.find(x => String(x.username).toLowerCase() === raw.toLowerCase());
+    if(!target){ tampilHasilUser(list, raw); toast('<i class="ph-fill ph-warning-circle"></i> User "' + escapeHtml(raw) + '" tidak ditemukan','error'); return; }
+    tutupModal('#modal-new-chat'); $('#new-chat-username').value = '';
+    bukaChatRoom('private', target.username);
+  } catch(e){ toast('<i class="ph-fill ph-warning-circle"></i> ' + escapeHtml(e.message || 'Pencarian gagal'), 'error'); }
 };
 const isYukiRoom = () => currentChatType === 'private' && currentChatRoom === 'Yuki';
 function yukiGet(){ try { return JSON.parse(localStorage.getItem('fr_chat_yuki') || '[]'); } catch(e){ return []; } }
@@ -1670,17 +1749,27 @@ window.bukaLampiran = function(ev){
   const a = ev && ev.currentTarget ? ev.currentTarget : document.body;
   showPopupMenu(a, [
     ['📷 Foto', () => { const f = document.getElementById('file-photo'); if(f) f.click(); }],
-    ['📄 Dokumen (segera)', () => toast('Dokumen: coming soon','info')],
-    ['📍 Lokasi (segera)', () => toast('Lokasi: coming soon','info')]
+    ['📄 Dokumen (segera)', () => toast('Dokumen: segera hadir','info')],
+    ['📍 Lokasi (segera)', () => toast('Lokasi: segera hadir','info')]
   ]);
+};
+window.lihatProfil = async function(name){
+  if(!name || name === 'Yuki'){ toast('Yuki adalah asisten AI SatriaReal ❄️','info'); return; }
+  try {
+    const r = await apiFetch('/api/users/' + encodeURIComponent(name));
+    const d = await r.json().catch(() => ({}));
+    if(!r.ok || !d.ok) throw new Error(d.msg || 'User tidak ditemukan');
+    rememberUser(d.user);
+    toast('<b>' + escapeHtml(d.user.username) + '</b><br>Bergabung ' + escapeHtml(wibFmt(d.user.joinedAt, { day: 'numeric', month: 'long', year: 'numeric' })), 'info');
+  } catch(e){ toast('<i class="ph-fill ph-warning-circle"></i> ' + escapeHtml(e.message || 'Gagal memuat profil'), 'error'); }
 };
 window.bukaChatMenu = function(ev){
   const a = ev && ev.currentTarget ? ev.currentTarget : document.body;
   showPopupMenu(a, [
-    ['👤 Lihat Profil', () => toast('Profil: coming soon','info')],
-    ['🔎 Cari Pesan', () => toast('Cari pesan: coming soon','info')],
-    ['🗑️ Hapus Chat', () => toast('Hapus chat: coming soon','info')],
-    ['🚫 Block Kontak', () => toast('Block kontak: coming soon','info')]
+    ['👤 Lihat Profil', () => lihatProfil(currentChatRoom)],
+    ['🔎 Cari Pesan', () => toast('Cari pesan: segera hadir','info')],
+    ['🗑️ Hapus Chat', () => toast('Hapus chat: segera hadir','info')],
+    ['🚫 Block Kontak', () => toast('Block kontak: segera hadir','info')]
   ]);
 };
 function setMsgStatus(type, room, time, st){
@@ -1768,7 +1857,7 @@ window.renderChatMessages = function(){
   const atBottom = box.scrollHeight - prev - box.clientHeight < 80;
   box.innerHTML = chats.map(c => {
     const isMe = String(c.sender || '').toLowerCase() === String(user.username || '').toLowerCase();
-    const time = new Date(c.time).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
+    const time = wibTime(c.time);
     const emojiOnly = c.type === 'text' && isEmojiOnly(c.text);
     let content;
     if(c.type === 'text') content = `<div class="wa-text">${emojiToApple(escapeHtml(c.text))}</div>`;
@@ -1865,7 +1954,7 @@ window.toggleRekam = async function(){
   if(!currentChatRoom) return;
   if(isYukiRoom()){ toast('Yuki hanya menerima teks ❄️','info'); return; }
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    return toast('<i class="ph-fill ph-warning-circle"></i> Mic butuh HTTPS (SSL)', 'error');
+    return toast('<i class="ph-fill ph-warning-circle"></i> Mikrofon butuh HTTPS (SSL)', 'error');
   }
   const btn = $('#btn-mic');
   let stream = null;
@@ -1893,7 +1982,7 @@ window.toggleRekam = async function(){
       recTimer = setInterval(() => { recSec++; const e = $('#rec-time'); if(e) e.textContent = String(Math.floor(recSec/60)).padStart(2,'0') + ':' + String(recSec%60).padStart(2,'0'); }, 1000);
       btn.classList.add('animate-pulse','text-red-500');
       toast('Merekam...', 'info');
-    } catch(e){ try { if(stream) stream.getTracks().forEach(t => t.stop()); } catch(_){} toast('Izin mic ditolak','error'); }
+    } catch(e){ try { if(stream) stream.getTracks().forEach(t => t.stop()); } catch(_){} toast('Izin mikrofon ditolak','error'); }
   } else {
     mediaRecorder.stop();
     isRecording = false;
@@ -2001,9 +2090,11 @@ window.toggleVideo = async function(){
 function setupVideoGestures(){ const v = $('#call-video-area'); if(!v) return; let sx = 0, sy = 0, mv = false; v.addEventListener('touchstart', e => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; mv = false; }, { passive: true }); v.addEventListener('touchmove', e => { const t = e.touches[0]; if(Math.abs(t.clientX - sx) > 10) mv = true; }, { passive: true }); v.addEventListener('touchend', e => { if(mv) return; const t = e.changedTouches[0]; const dx = t.clientX - sx; const dy = t.clientY - sy; if(Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) flipCamera(); }, { passive: true }); }
 
 window.mulaiPanggilan = async function(type){
-  return toast('<i class="ph-fill ph-info"></i> Fitur panggilan tidak tersedia', 'info');
-  /* eslint-disable */ if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    return toast('<i class="ph-fill ph-warning-circle"></i> Kamera/Mic butuh HTTPS (SSL)', 'error');
+  if(isYukiRoom()) return toast('Yuki adalah asisten AI, tidak bisa ditelepon ❄️','info');
+  if(!socket || !socket.connected) return toast('<i class="ph-fill ph-warning-circle"></i> Belum terhubung ke server chat. Coba lagi sebentar lagi.','error');
+  pendingIce = [];
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    return toast('<i class="ph-fill ph-warning-circle"></i> Kamera/Mikrofon butuh HTTPS (SSL)', 'error');
   }
   const cu = DB.currentUser(); if(!cu) return toast('<i class="ph-fill ph-warning-circle"></i> Login dulu','error');
   try {
@@ -2027,7 +2118,10 @@ window.mulaiPanggilan = async function(type){
     await peerConnection.setLocalDescription(offer);
     if(currentChatType === 'global') socket.emit('global-call-user', { from: cu.username, signal: offer, type });
     else socket.emit('call-user', { signal: offer, type, to: currentChatRoom });
-  } catch(e){ toast('Gagal akses kamera','error'); }
+  } catch(e){
+    toast('<i class="ph-fill ph-warning-circle"></i> ' + (e && e.name === 'NotAllowedError' ? 'Izin kamera/mikrofon ditolak. Aktifkan lewat pengaturan browser.' : 'Gagal memulai panggilan: ' + escapeHtml((e && e.message) || 'kamera/mikrofon tidak tersedia')), 'error');
+    try { akhiriPanggilanUI(); } catch(_){}
+  }
 };
 
 let incomingSignal = null, incomingType = null;
@@ -2041,7 +2135,7 @@ window.terimaPanggilan = async function(){
   $('#modal-incoming-call').classList.add('hidden');
   const r = document.getElementById('ringtone'); if(r){ r.pause(); r.currentTime = 0; }
   if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    return toast('<i class="ph-fill ph-warning-circle"></i> Kamera/Mic butuh HTTPS (SSL)', 'error');
+    return toast('<i class="ph-fill ph-warning-circle"></i> Kamera/Mikrofon butuh HTTPS (SSL)', 'error');
   }
   try {
     currentFacingMode = 'user'; videoEnabled = true;
@@ -2061,14 +2155,15 @@ window.terimaPanggilan = async function(){
     peerConnection.ontrack = e => { $('#remote-video').srcObject = e.streams[0]; if(incomingType === 'video') $('#remote-video').classList.remove('hidden'); $('#call-info').classList.add('hidden'); };
     peerConnection.onicecandidate = e => { if(e.candidate && socket) socket.emit('ice-candidate', { candidate: e.candidate }); };
     await peerConnection.setRemoteDescription(new RTCSessionDescription(incomingSignal));
+    await flushIce();
     const ans = await peerConnection.createAnswer();
     await peerConnection.setLocalDescription(ans);
     socket.emit('answer-call', { signal: ans });
-  } catch(e){ toast('Gagal terima','error'); }
+  } catch(e){ toast('<i class="ph-fill ph-warning-circle"></i> Gagal menerima panggilan' + (e && e.name === 'NotAllowedError' ? ': izin kamera/mikrofon ditolak' : ''), 'error'); try { akhiriPanggilanUI(); } catch(_){} }
 };
 window.tolakPanggilan = function(){ $('#modal-incoming-call').classList.add('hidden'); const r = document.getElementById('ringtone'); if(r){ r.pause(); r.currentTime = 0; } if(socket) socket.emit('call-ended'); };
 window.akhiriPanggilan = function(){ if(socket) socket.emit('call-ended'); akhiriPanggilanUI(); };
-window.akhiriPanggilanUI = function(){
+window.akhiriPanggilanUI = function(){ pendingIce = [];
   currentFacingMode = 'user'; videoEnabled = true;
   $('#btn-flip-camera')?.classList.add('hidden'); $('#btn-toggle-video')?.classList.add('hidden');
   $('#modal-call').classList.add('hidden');
@@ -2130,13 +2225,13 @@ window.toggleFlashStatus = async function(){
   const t = statusStream.getVideoTracks()[0]; if(!t) return;
   try {
     const c = t.getCapabilities ? t.getCapabilities() : {};
-    if(!c.torch){ toast('Flash tidak support','error'); return; }
+    if(!c.torch){ toast('Flash tidak didukung','error'); return; }
     flashEnabled = !flashEnabled;
     await t.applyConstraints({ advanced: [{ torch: flashEnabled }] });
     const b = $('#btn-flash-status');
     if(b){ if(flashEnabled){ b.classList.add('bg-yellow-400'); b.classList.remove('bg-white/20'); } else { b.classList.remove('bg-yellow-400'); b.classList.add('bg-white/20'); } }
     toast(flashEnabled ? '<i class="ph-fill ph-flashlight"></i> Flash ON' : '<i class="ph-fill ph-flashlight"></i> Flash OFF','info');
-  } catch(e){ toast('Flash tidak support','error'); }
+  } catch(e){ toast('Flash tidak didukung','error'); }
 };
 window.setModeStatus = function(mode){
   if(statusIsRecording || statusLiveRecording) return;
@@ -2201,7 +2296,7 @@ window.ambilLivePhotoStatus = async function(){
     };
     rec.start();
     setTimeout(() => { try { rec.stop(); } catch(e){} }, liveDuration * 1000);
-  } catch(e){ statusLiveRecording = false; $('#recording-indicator')?.classList.add('hidden'); toast('Gagal live','error'); }
+  } catch(e){ statusLiveRecording = false; $('#recording-indicator')?.classList.add('hidden'); toast('Gagal memulai live','error'); }
 };
 function mulaiRekamStatus(){
   if(!statusStream || statusIsRecording) return;
@@ -2230,7 +2325,7 @@ function mulaiRekamStatus(){
       if(tEl) tEl.textContent = m + ':' + s;
       if(statusRecordSeconds >= 30) stopRekamStatus();
     }, 1000);
-  } catch(e){ toast('Gagal rekam','error'); statusIsRecording = false; }
+  } catch(e){ toast('Gagal merekam','error'); statusIsRecording = false; }
 }
 function stopRekamStatus(){
   if(!statusIsRecording) return;
@@ -2260,7 +2355,7 @@ window.tutupPreviewStatus = function(){
 };
 window.pilihGaleriStatus = function(e){
   const f = e.target.files[0]; if(!f) return;
-  if(f.size > 5*1024*1024){ toast('Max 5MB','error'); return; }
+  if(f.size > 5*1024*1024){ toast('Maksimal 5MB','error'); return; }
   const r = new FileReader();
   r.onload = (ev) => {
     statusCapturedData = { data: ev.target.result, type: f.type.startsWith('video/') ? 'video' : 'image' };
@@ -2288,9 +2383,9 @@ window.kirimStatusBaru = function(){
     $('#modal-status-preview')?.classList.add('hidden');
     const v = $('#preview-cam-vid'); if(v){ v.pause(); v.src = ''; }
     statusCapturedData = null;
-    toast('<i class="ph-fill ph-check-circle"></i> Status diupload','success');
+    toast('<i class="ph-fill ph-check-circle"></i> Status terkirim','success');
     switchWATab('status');
-  } catch(e){ toast('Gagal simpan','error'); }
+  } catch(e){ toast('Gagal menyimpan','error'); }
 };
 window.previewStatus = function(){
   const t = $('#status-text').value.trim();
@@ -2299,7 +2394,7 @@ window.previewStatus = function(){
   $('#preview-status-text').textContent = t || 'Media';
   const img = $('#preview-status-img'), vid = $('#preview-status-video');
   if(f){
-    if(f.size > 2*1024*1024){ toast('Max 2MB','error'); return; }
+    if(f.size > 2*1024*1024){ toast('Maksimal 2MB','error'); return; }
     const r = new FileReader();
     r.onload = (e) => {
       if(f.type.startsWith('video/')){ vid.src = e.target.result; vid.classList.remove('hidden'); img.classList.add('hidden'); }
@@ -2382,7 +2477,7 @@ window.balasStatus = function(){
   const inp = $('#status-reply-input');
   const txt = inp.value.trim(); if(!txt) return;
   const target = currentStatusViewing.name;
-  if(target === user.username){ toast('Tidak bisa balas sendiri','error'); return; }
+  if(target === user.username){ toast('Tidak bisa membalas status sendiri','error'); return; }
   const now = Date.now();
   const msg = { sender: user.username, text: txt, type: 'text', time: now };
   const c = DB.getPrivateChat(user.username, target);
@@ -2431,6 +2526,9 @@ const OTP_RING = 100.53;
 
 const otpReduce = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch(e){ return false; } };
 const otpNorm = (e) => String(e || '').trim().toLowerCase();
+const otpNormWA = (w) => { let n = String(w || '').replace(/\D/g, ''); if(n.startsWith('0')) n = '62' + n.slice(1); else if(n.startsWith('8')) n = '62' + n; return n; };
+const otpValidWA = (w) => /^62\d{8,13}$/.test(otpNormWA(w));
+const otpWA = () => { const el = $('#reg-wa'); return el ? el.value : ''; };
 const otpValidEmail = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 const otpSetLoading = (btn, on) => { if(!btn) return; btn.disabled = !!on; btn.classList.toggle('is-loading', !!on); };
 const otpRetrigger = (el, cls) => { if(!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
@@ -2496,16 +2594,18 @@ function otpShowStep(n, dir, keepBoxes){
   if(dir === 'next') to.classList.add('step-r'); else if(dir === 'back') to.classList.add('step-l');
   const sub = $('#otp-sub');
   if(n === 2){
-    sub.textContent = 'Masukkan kode ' + otpLen + ' digit dari email kamu.';
+    sub.textContent = 'Masukkan kode ' + otpLen + ' digit dari ' + (WA_OTP_ON ? 'email dan WhatsApp' : 'email') + ' kamu.';
     if(!keepBoxes || otpBoxes().length !== otpLen) otpBuildBoxes(otpLen);
     setTimeout(() => { const f = otpBoxes().find(b => !b.value) || otpBoxes()[0]; if(f) f.focus(); }, otpReduce() ? 0 : 380);
   } else {
-    sub.textContent = 'Kami kirim kode OTP ke email kamu.';
+    sub.textContent = 'Kami kirim kode OTP ke ' + (WA_OTP_ON ? 'email dan WhatsApp' : 'email') + ' kamu.';
   }
 }
 
 window.bukaOTP = function(email){
   const em = otpNorm(email);
+  if(!otpValidEmail(em)){ toast('<i class="ph-fill ph-warning-circle"></i> Isi email yang valid dulu','error'); const re = $('#reg-email'); if(re) re.focus(); return; }
+  if(!otpValidWA(otpWA())){ toast('<i class="ph-fill ph-warning-circle"></i> Isi nomor WhatsApp yang valid dulu (contoh 08123456789)','error'); const rw = $('#reg-wa'); if(rw) rw.focus(); return; }
   otpResetHero();
   const inp = $('#otp-email'); if(inp) inp.value = em;
   const alive = em && em === otpCurrentEmail && Date.now() < otpExpireAt;
@@ -2527,23 +2627,33 @@ window.kirimOTP = async function(isResend){
   const inp = $('#otp-email');
   if(!email){ otpShake(inp); return toast('Isi email dulu','error'); }
   if(!otpValidEmail(email)){ otpShake(inp); return toast('Format email tidak valid','error'); }
+  const wa = otpWA();
+  if(!otpValidWA(wa)){ return toast('<i class="ph-fill ph-warning-circle"></i> Nomor WhatsApp belum valid. Tutup lalu perbaiki di form daftar.','error'); }
   otpBusy = true;
   const btn = resend ? $('#otp-btn-resend') : $('#otp-btn-send');
   const hero = $('#otp-hero');
   if(!resend) otpSetLoading(btn, true); else btn.disabled = true;
   hero.classList.remove('sent'); hero.classList.add('sending');
   try {
-    const code = String(Math.floor(Math.random() * 900000) + 100000);
-    __localOTP = { code, email, expires: Date.now() + 300000, tries: 0 };
+    const r = await apiFetch('/api/otp/send', { method: 'POST', body: JSON.stringify({ email, wa: otpNormWA(wa) }) });
+    const d = await r.json().catch(() => ({}));
+    if(!r.ok || !d.ok){
+      if(r.status === 429 && d.retryAfter && resend) otpStartCooldown(d.retryAfter);
+      throw new Error(d.msg || 'Gagal mengirim kode, coba lagi');
+    }
     otpCurrentEmail = email;
-    otpLen = 6;
-    otpExpireAt = Date.now() + 300000;
+    otpLen = Number(d.length) || 6;
+    otpExpireAt = Date.now() + (Number(d.expiresIn) || 300) * 1000;
+    window.__otpSentWA = otpNormWA(wa);
     $('#otp-sent-email').textContent = email;
     otpShowStep(2, 'next', false);
-    otpStartCooldown(60);
+    otpStartCooldown(Number(d.cooldown) || 60);
     otpClearBoxes(false);
     hero.classList.remove('sending'); void hero.offsetWidth; hero.classList.add('sent');
-    toast(`<b>OTP:</b> <span style="font-family:monospace;font-size:14px;letter-spacing:3px;font-weight:900;padding:1px 6px;background:#fff;border-radius:6px;border:1.5px solid #000;">${code}</span>`, 'info');
+    toast('<i class="ph-fill ph-check-circle"></i> ' + escapeHtml(d.msg || 'Kode terkirim'), 'success');
+  } catch(e){
+    otpShake(resend ? null : inp);
+    toast('<i class="ph-fill ph-warning-circle"></i> ' + escapeHtml(e.message || 'Gagal mengirim kode'), 'error');
   } finally {
     otpBusy = false;
     hero.classList.remove('sending');
@@ -2559,14 +2669,12 @@ window.verifyOTP = async function(){
   let keepBusy = false;
   const btn = $('#otp-btn-verify'); otpSetLoading(btn, true);
   try {
-    if(!__localOTP) throw new Error('Kode tidak ditemukan, kirim ulang kode');
-    if(__localOTP.expires < Date.now()){ __localOTP = null; throw new Error('Kode kadaluarsa, kirim ulang kode'); }
-    if(__localOTP.tries >= 5){ __localOTP = null; throw new Error('Terlalu banyak salah, kirim ulang kode'); }
-    __localOTP.tries++;
-    if(__localOTP.code !== code) throw new Error(`Kode salah (${5 - __localOTP.tries}x lagi)`);
-    __localOTP = null;
+    const r = await apiFetch('/api/otp/verify', { method: 'POST', body: JSON.stringify({ email: otpCurrentEmail, code }) });
+    const d = await r.json().catch(() => ({}));
+    if(!r.ok || !d.ok){ const er = new Error(d.msg || 'Kode salah'); er.status = r.status; er.code = d.code; throw er; }
     window.__otpVerifiedEmail = otpCurrentEmail;
-    window.__otpToken = 'local-' + Date.now();
+    window.__otpVerifiedWA = window.__otpSentWA || '';
+    window.__otpToken = d.proof; // bukti OTP dari server; tanpa ini pendaftaran ditolak server
     otpExpireAt = 0; keepBusy = true;
     clearInterval(otpTimerId); otpTimerId = null;
     const hero = $('#otp-hero'); hero.classList.remove('sending','sent'); hero.classList.add('done');
@@ -2580,9 +2688,8 @@ window.verifyOTP = async function(){
       const rb = $('#reg-verified-badge'); if(rb){ rb.classList.remove('hidden'); otpRetrigger(rb, 'badge-pop'); }
     }, otpReduce() ? 0 : 1300);
   } catch(e){
-    const bs = otpBoxes();
-    bs.forEach(b => b.classList.add('err')); otpShake();
-    if(/kadaluarsa|tidak ditemukan/.test(e.message)) otpExpireAt = 0;
+    otpBoxes().forEach(b => b.classList.add('err')); otpShake();
+    if(e.status === 404 || e.status === 410 || e.code === 'locked') otpExpireAt = 0; // kode hangus: wajib minta kode baru
     toast('<i class="ph-fill ph-warning-circle"></i> ' + escapeHtml(e.message || 'Kode salah'), 'error');
     setTimeout(() => otpClearBoxes(true), otpReduce() ? 0 : 650);
   } finally {
@@ -2625,6 +2732,9 @@ document.addEventListener('input', (e) => {
   } else if(t.id === 'reg-email'){
     const rb = $('#reg-verified-badge');
     if(rb && otpNorm(t.value) !== (window.__otpVerifiedEmail || '')){ rb.classList.add('hidden'); window.__otpToken = null; }
+  } else if(t.id === 'reg-wa'){
+    const rb = $('#reg-verified-badge');
+    if(window.__otpToken && otpNormWA(t.value) !== (window.__otpVerifiedWA || '')){ if(rb) rb.classList.add('hidden'); window.__otpToken = null; window.__otpVerifiedEmail = ''; }
   }
 });
 document.addEventListener('keydown', (e) => {
@@ -2674,63 +2784,65 @@ window.switchAuthTab = function(type){
     $('#form-login').classList.add('hidden');
   }
 };
+function onSessionExpired(){
+  if(!DB.currentUser() && !Sess.user()) return;
+  Sess.setUser(''); DB.logout();
+  try { if(socket){ socket.disconnect(); socket = null; } } catch(e){}
+  try { updateOwnerUI(); renderSidebarMenu(); } catch(e){}
+  toast('<i class="ph-fill ph-warning-circle"></i> Sesi berakhir, silakan login lagi','error');
+  try { $('#auth-screen').classList.remove('hidden'); } catch(e){}
+}
+function afterAuth(d, msg){
+  DB.setOwner(false);
+  Sess.setUser(d.token);
+  DB.setCurrentUser(d.user);
+  rememberUser(d.user);
+  toast('<i class="ph-fill ph-check-circle"></i> ' + msg,'success');
+  $('#auth-screen').classList.add('hidden');
+  updateOwnerUI();
+  renderSidebarMenu();
+  try { window.reconnectSocket(); } catch(_){}
+  render(getPath());
+  if(pendingOrderId){ const pid = pendingOrderId; pendingOrderId = null; setTimeout(() => bukaFormOrder(pid), 100); }
+}
 window.handleLogin = async function(e){
   e.preventDefault();
+  const btn = e.submitter || document.querySelector('#form-login button[type=submit]');
   try {
-    const id = $('#login-email').value.trim().toLowerCase();
+    const id = $('#login-email').value.trim();
     const pass = $('#login-password').value;
-    if(!id || !pass){ toast('Isi semua','error'); return; }
-    const users = DB.getUsers();
-    if(!users.length){ toast('Belum ada akun. Daftar dulu.','error'); return; }
-    const user = users.find(u => (u.email && u.email.toLowerCase() === id) || (u.username && u.username.toLowerCase() === id));
-    if(!user){ toast('Akun tidak ditemukan','error'); return; }
-    if(String(user.pass) !== String(pass)){ toast('Password salah','error'); return; }
-    try {
-      const br = await apiFetch('/api/ban?check=' + encodeURIComponent(user.username));
-      const bd = await br.json();
-      if(bd && bd.banned && bd.data){ toast('<i class="ph-fill ph-prohibit"></i> Akun diblokir: ' + escapeHtml(bd.data.reason || '-'),'error'); return; }
-    } catch(_){ /* offline: lewati cek ban */ }
-    DB.setOwner(false);
-    DB.setCurrentUser(user);
-    toast('<i class="ph-fill ph-check-circle"></i> Login berhasil!','success');
-    $('#auth-screen').classList.add('hidden');
-    updateOwnerUI();
-    renderSidebarMenu();
-    if(socket) try { socket.emit('join', { username: user.username }); } catch(_) {}
-    render(getPath());
-    if(pendingOrderId){ const pid = pendingOrderId; pendingOrderId = null; setTimeout(() => bukaFormOrder(pid), 100); }
-  } catch(e){ toast('Error login','error'); }
+    if(!id || !pass){ toast('Isi username/email dan password','error'); return; }
+    if(btn) btn.disabled = true;
+    const r = await apiFetch('/api/auth/login', { method: 'POST', body: JSON.stringify({ id, password: pass }) });
+    const d = await r.json().catch(() => ({}));
+    if(!r.ok || !d.ok){ toast('<i class="ph-fill ph-prohibit"></i> ' + escapeHtml(d.msg || 'Login gagal, coba lagi'),'error'); return; }
+    afterAuth(d, 'Login berhasil!');
+  } catch(err){ toast('<i class="ph-fill ph-warning-circle"></i> Server tidak terjangkau. Periksa koneksi lalu coba lagi.','error'); }
+  finally { if(btn) btn.disabled = false; }
 };
-window.handleRegister = function(e){
+window.handleRegister = async function(e){
   e.preventDefault();
+  const btn = e.submitter || document.querySelector('#form-register button[type=submit]');
   try {
-    const username = $('#reg-username').value.trim().replace(/\s+/g,'');
-    const wa = $('#reg-wa').value.trim().replace(/\D/g,'');
-    const email = $('#reg-email').value.trim().toLowerCase();
+    const username = $('#reg-username').value.trim();
+    const wa = $('#reg-wa').value.trim();
+    const email = otpNorm($('#reg-email').value);
     const pass = $('#reg-password').value;
     const pass2 = $('#reg-password2').value;
-    const users = DB.getUsers();
-    if(username.length < 3){ toast('Username min 3','error'); return; }
-    if(wa.length < 9){ toast('WA tidak valid','error'); return; }
-    if(!email.includes('@') || !email.includes('.')){ toast('Email tidak valid','error'); return; }
-    if(pass.length < 6){ toast('Pass min 6','error'); return; }
-    if(pass !== pass2){ toast('Konfirmasi tidak cocok','error'); return; }
-    if(users.find(u => u.email && u.email.toLowerCase() === email)){ toast('Email sudah ada','error'); return; }
-    if(username.toLowerCase() === 'yuki'){ toast('Username itu dipakai asisten AI','error'); return; }
-    if(users.find(u => u.username && u.username.toLowerCase() === username.toLowerCase())){ toast('Username sudah ada','error'); return; }
-    const nu = { username, wa: wa.startsWith('0') ? '62' + wa.slice(1) : wa, email, pass, joinedAt: new Date().toISOString(), avatar: null };
-    users.push(nu);
-    DB.saveUsers(users);
-    DB.setOwner(false);
-    DB.setCurrentUser(nu);
-    toast('<i class="ph-fill ph-check-circle"></i> Akun dibuat!','success');
-    $('#auth-screen').classList.add('hidden');
-    updateOwnerUI();
-    renderSidebarMenu();
-    if(socket) try { socket.emit('join', { username: nu.username }); } catch(_) {}
-    render(getPath());
-    if(pendingOrderId){ const pid = pendingOrderId; pendingOrderId = null; setTimeout(() => bukaFormOrder(pid), 100); }
-  } catch(e){ toast('Error daftar','error'); }
+    if(!/^[A-Za-z0-9_.-]{3,20}$/.test(username)){ toast('Username 3-20 karakter: huruf, angka, titik, strip, atau underscore (tanpa spasi)','error'); return; }
+    if(!otpValidWA(wa)){ toast('Nomor WhatsApp tidak valid (contoh 08123456789)','error'); return; }
+    if(!otpValidEmail(email)){ toast('Format email tidak valid','error'); return; }
+    if(pass.length < 6){ toast('Password minimal 6 karakter','error'); return; }
+    if(pass !== pass2){ toast('Konfirmasi password tidak cocok','error'); return; }
+    if(!window.__otpToken || window.__otpVerifiedEmail !== email){ toast('<i class="ph-fill ph-warning-circle"></i> Verifikasi email dulu dengan tombol "Verifikasi"','error'); return; }
+    if(btn) btn.disabled = true;
+    const r = await apiFetch('/api/auth/register', { method: 'POST', body: JSON.stringify({ proof: window.__otpToken, username, password: pass, wa: otpNormWA(wa) }) });
+    const d = await r.json().catch(() => ({}));
+    if(!r.ok || !d.ok){ toast('<i class="ph-fill ph-warning-circle"></i> ' + escapeHtml(d.msg || 'Pendaftaran gagal'),'error'); if(r.status === 401){ window.__otpToken = null; const rb = $('#reg-verified-badge'); if(rb) rb.classList.add('hidden'); } return; }
+    window.__otpToken = null; window.__otpVerifiedEmail = '';
+    afterAuth(d, 'Akun berhasil dibuat!');
+  } catch(err){ toast('<i class="ph-fill ph-warning-circle"></i> Server tidak terjangkau. Coba lagi.','error'); }
+  finally { if(btn) btn.disabled = false; }
 };
 window.handleUserLogout = function(){
   if(!confirm('Yakin keluar?')) return;
@@ -2743,21 +2855,21 @@ window.handleUserLogout = function(){
 };
 window.uploadAvatar = function(e){
   const f = e.target.files[0]; if(!f) return;
-  if(f.size > 500000) return toast('Max 500KB','error');
-  if(!f.type.startsWith('image/')) return toast('Harus gambar','error');
+  if(f.size > 500000) return toast('Ukuran foto maksimal 500KB','error');
+  if(!f.type.startsWith('image/')) return toast('File harus berupa gambar','error');
   const user = DB.currentUser(); if(!user){ toast('<i class="ph-fill ph-warning-circle"></i> Login dulu','error'); return; }
   const r = new FileReader();
-  r.onload = (ev) => {
-    const users = DB.getUsers();
-    const idx = users.findIndex(u => u.email === user.email);
-    if(idx >= 0){
-      users[idx].avatar = ev.target.result;
-      DB.saveUsers(users);
-      DB.setCurrentUser(users[idx]);
-      toast('<i class="ph-fill ph-check-circle"></i> Foto diupdate','success');
+  r.onload = async (ev) => {
+    try {
+      const res = await apiFetch('/api/users/avatar', { method: 'POST', body: JSON.stringify({ avatar: ev.target.result }) });
+      const d = await res.json().catch(() => ({}));
+      if(!res.ok || !d.ok) throw new Error(d.msg || 'Gagal menyimpan foto');
+      const u = Object.assign({}, user, { avatar: ev.target.result });
+      DB.setCurrentUser(u); rememberUser(u);
+      toast('<i class="ph-fill ph-check-circle"></i> Foto diperbarui','success');
       render('/profile');
       updateOwnerUI();
-    }
+    } catch(err){ toast('<i class="ph-fill ph-warning-circle"></i> ' + escapeHtml(err.message || 'Gagal menyimpan foto'),'error'); }
   };
   r.readAsDataURL(f);
   e.target.value = '';
@@ -2872,7 +2984,7 @@ function halamanPromo(){ return `<section class="page-enter space-y-4"><div clas
 
 function halamanLeaderboard(){ const s = getStats(); const iV = '<svg class="w-4 h-4 stroke-black mx-auto" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>'; const iU = '<svg class="w-4 h-4 stroke-black mx-auto" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>'; const iO = '<svg class="w-4 h-4 stroke-black mx-auto" viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>'; const list = Object.keys(s.produkTerjual).map(k => `<div class="flex justify-between items-center p-2 border-b-2 border-gray-200 text-xs font-bold"><span>${escapeHtml(k)}</span><span class="bg-emerald-300 px-2 py-0.5 border border-black rounded text-[10px]">${s.produkTerjual[k]} terjual</span></div>`).join('') || '<p class="text-xs text-center text-gray-500 py-3">Belum ada penjualan</p>'; return `<section class="page-enter space-y-4"><h1 class="font-display font-black text-2xl sm:text-4xl">STATISTIK</h1><div class="grid grid-cols-3 gap-2 sm:gap-3">${statCard('Pengunjung', s.visitors, 'bg-blue-200', iV)}${statCard('User', s.totalUsers, 'bg-emerald-300', iU)}${statCard('Pembelian', s.totalOrders, 'bg-yellow-300', iO)}</div><div class="neo-box bg-white rounded-2xl p-4"><h2 class="font-display font-black text-lg mb-2">Produk Terjual</h2>${list}</div></section>`; }
 
-function halamanProfil(){ const user = DB.currentUser(); const isO = DB.isOwner(); if(!user && !isO) return `<section class="page-enter text-center py-10"><div class="neo-box-lg bg-white p-6 rounded-2xl"><h1 class="font-display font-black text-2xl">BELUM LOGIN</h1><button onclick="bukaAuth()" class="neo-btn bg-yellow-300 mt-4 px-5 py-2 rounded-full font-black text-xs">LOGIN</button></div></section>`; const username = isO ? 'Developer Satria' : user.username; const email = isO ? 'dev@satriareal.com' : user.email; const wa = isO ? '6281271044597' : user.wa; const st = isO ? 'DEVELOPER' : 'MEMBER'; const av = isO ? 'https://ui-avatars.com/api/?name=Developer&background=ffdc58&color=211b31&bold=true&size=128' : getAvatarUrl(username, 128); return `<section class="page-enter space-y-4"><div class="neo-box-lg bg-white rounded-3xl p-5 text-center relative border-2 border-black overflow-hidden"><div class="absolute top-0 left-0 w-full h-24 bg-yellow-300 border-b-2 border-black"></div><div class="relative z-10 mt-6 flex flex-col items-center"><div class="relative inline-block"><img src="${av}" class="w-24 h-24 rounded-full border-4 border-black bg-white object-cover">${!isO ? `<button onclick="document.getElementById('avatar-file').click()" class="absolute bottom-0 right-0 w-8 h-8 bg-yellow-300 border-2 border-black rounded-full flex items-center justify-center font-black text-xs">+</button><input type="file" id="avatar-file" accept="image/*" class="hidden" onchange="uploadAvatar(event)">` : ''}</div><h2 class="font-display font-black text-xl mt-3 flex items-center">${escapeHtml(username)} ${getVerifiedBadge(username)}</h2><p class="text-xs font-semibold text-gray-500">${escapeHtml(email)}</p><div class="mt-2 flex gap-2"><span class="bg-blue-100 px-3 py-1 rounded-full text-[10px] font-black border-2 border-black">${st}</span><span class="bg-emerald-100 px-3 py-1 rounded-full text-[10px] font-black border-2 border-black">WA ${escapeHtml(wa)}</span></div></div></div><div class="grid grid-cols-2 gap-2"><div class="neo-box bg-white rounded-2xl p-3 text-center"><p class="text-[10px] font-black uppercase text-gray-500">Total Belanja</p><p class="font-display font-black text-lg" id="profile-spending-total">Rp0</p></div><div class="neo-box bg-white rounded-2xl p-3 text-center"><p class="text-[10px] font-black uppercase text-gray-500">Total Order</p><p class="font-display font-black text-lg" id="profile-spending-count">0</p></div></div><div class="grid grid-cols-1 gap-3">${!isO ? `<div class="neo-box bg-white rounded-2xl p-4"><h3 class="font-display font-black text-sm mb-2">Ganti Nama</h3><div class="flex gap-2"><input id="new-username" type="text" class="flex-1 px-3 py-2 text-xs font-semibold rounded-lg border-2 border-black" value="${escapeHtml(username)}"><button onclick="ubahNama()" class="neo-btn bg-yellow-300 px-4 py-2 rounded-lg font-black text-xs">SIMPAN</button></div></div><div class="neo-box bg-white rounded-2xl p-4"><h3 class="font-display font-black text-sm mb-2">Ganti Password</h3><div class="space-y-2"><input id="old-pass" type="password" class="w-full px-3 py-2 text-xs rounded-lg border-2 border-black" placeholder="Password lama"><input id="new-pass" type="password" class="w-full px-3 py-2 text-xs rounded-lg border-2 border-black" placeholder="Password baru"><input id="new-pass2" type="password" class="w-full px-3 py-2 text-xs rounded-lg border-2 border-black" placeholder="Ulangi"><button onclick="ubahPassword()" class="w-full neo-btn bg-emerald-300 py-2 rounded-lg font-black text-xs">SIMPAN</button></div></div>` : ''}<div class="neo-box bg-white rounded-2xl p-4"><h3 class="font-display font-black text-sm mb-2">Tema</h3><div class="flex flex-wrap gap-2"><button onclick="gantiTemaProfil('biru')" class="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black bg-blue-400 text-white">Biru</button><button onclick="gantiTemaProfil('hijau')" class="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black bg-emerald-400 text-white">Hijau</button><button onclick="gantiTemaProfil('ungu')" class="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black bg-purple-400 text-white">Ungu</button><button onclick="gantiTemaProfil('merah')" class="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black bg-red-400 text-white">Merah</button><button onclick="gantiTemaProfil('kuning')" class="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black bg-yellow-400 text-black">Kuning</button></div></div></div>${!isO ? `<button onclick="handleUserLogout()" class="w-full neo-btn bg-red-400 py-3.5 rounded-xl font-black text-sm text-white mt-2">KELUAR</button>` : ''}</section>`; }
+function halamanProfil(){ const user = DB.currentUser(); const isO = DB.isOwner(); if(!user && !isO) return `<section class="page-enter text-center py-10"><div class="neo-box-lg bg-white p-6 rounded-2xl"><h1 class="font-display font-black text-2xl">BELUM LOGIN</h1><button onclick="bukaAuth()" class="neo-btn bg-yellow-300 mt-4 px-5 py-2 rounded-full font-black text-xs">LOGIN</button></div></section>`; const username = isO ? 'Developer Satria' : user.username; const email = isO ? 'dev@satriareal.com' : user.email; const wa = isO ? '6281271044597' : user.wa; const st = isO ? 'DEVELOPER' : 'MEMBER'; const av = isO ? 'https://ui-avatars.com/api/?name=Developer&background=ffdc58&color=211b31&bold=true&size=128' : getAvatarUrl(username, 128); return `<section class="page-enter space-y-4"><div class="neo-box-lg bg-white rounded-3xl p-5 text-center relative border-2 border-black overflow-hidden"><div class="absolute top-0 left-0 w-full h-24 bg-yellow-300 border-b-2 border-black"></div><div class="relative z-10 mt-6 flex flex-col items-center"><div class="relative inline-block"><img src="${av}" class="w-24 h-24 rounded-full border-4 border-black bg-white object-cover">${!isO ? `<button onclick="document.getElementById('avatar-file').click()" class="absolute bottom-0 right-0 w-8 h-8 bg-yellow-300 border-2 border-black rounded-full flex items-center justify-center font-black text-xs">+</button><input type="file" id="avatar-file" accept="image/*" class="hidden" onchange="uploadAvatar(event)">` : ''}</div><h2 class="font-display font-black text-xl mt-3 flex items-center">${escapeHtml(username)} ${getVerifiedBadge(username)}</h2><p class="text-xs font-semibold text-gray-500">${escapeHtml(email)}</p><div class="mt-2 flex gap-2"><span class="bg-blue-100 px-3 py-1 rounded-full text-[10px] font-black border-2 border-black">${st}</span><span class="bg-emerald-100 px-3 py-1 rounded-full text-[10px] font-black border-2 border-black">WA ${escapeHtml(wa)}</span></div></div></div><div class="grid grid-cols-2 gap-2"><div class="neo-box bg-white rounded-2xl p-3 text-center"><p class="text-[10px] font-black uppercase text-gray-500">Total Belanja</p><p class="font-display font-black text-lg" id="profile-spending-total">Rp0</p></div><div class="neo-box bg-white rounded-2xl p-3 text-center"><p class="text-[10px] font-black uppercase text-gray-500">Total Order</p><p class="font-display font-black text-lg" id="profile-spending-count">0</p></div></div><div class="grid grid-cols-1 gap-3">${!isO ? `<div class="neo-box bg-white rounded-2xl p-4"><h3 class="font-display font-black text-sm mb-2">Username</h3><p class="text-xs font-semibold text-gray-500">Username tidak bisa diubah setelah terdaftar supaya akunmu tidak bisa ditiru.</p></div><div class="neo-box bg-white rounded-2xl p-4"><h3 class="font-display font-black text-sm mb-2">Ganti Password</h3><div class="space-y-2"><input id="old-pass" type="password" class="w-full px-3 py-2 text-xs rounded-lg border-2 border-black" placeholder="Password lama"><input id="new-pass" type="password" class="w-full px-3 py-2 text-xs rounded-lg border-2 border-black" placeholder="Password baru"><input id="new-pass2" type="password" class="w-full px-3 py-2 text-xs rounded-lg border-2 border-black" placeholder="Ulangi"><button onclick="ubahPassword()" class="w-full neo-btn bg-emerald-300 py-2 rounded-lg font-black text-xs">SIMPAN</button></div></div>` : ''}<div class="neo-box bg-white rounded-2xl p-4"><h3 class="font-display font-black text-sm mb-2">Tema</h3><div class="flex flex-wrap gap-2"><button onclick="gantiTemaProfil('biru')" class="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black bg-blue-400 text-white">Biru</button><button onclick="gantiTemaProfil('hijau')" class="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black bg-emerald-400 text-white">Hijau</button><button onclick="gantiTemaProfil('ungu')" class="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black bg-purple-400 text-white">Ungu</button><button onclick="gantiTemaProfil('merah')" class="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black bg-red-400 text-white">Merah</button><button onclick="gantiTemaProfil('kuning')" class="px-3 py-1.5 rounded-lg text-xs font-black border-2 border-black bg-yellow-400 text-black">Kuning</button></div></div></div>${!isO ? `<button onclick="handleUserLogout()" class="w-full neo-btn bg-red-400 py-3.5 rounded-xl font-black text-sm text-white mt-2">KELUAR</button>` : ''}</section>`; }
 
 window.gantiTemaProfil = function(t){ setTema(t); render(getPath()); };
 
@@ -2887,7 +2999,7 @@ async function halamanSpending(){
     count: myOrders.length,
     history: myOrders.slice(0, 20).map(o => ({ ts: Date.now(), amount: o.bayar, produk: o.produk, paket: o.paket }))
   };
-  const hist = sp.history.length ? sp.history.map(h => `<div class="flex justify-between items-center p-2 border-b-2 border-gray-200 text-xs font-bold"><div><p class="font-black">${escapeHtml(h.produk)} <span class="text-[10px] font-normal text-gray-500">(${escapeHtml(h.paket||'')})</span></p><p class="text-[10px] text-gray-400">${new Date(h.ts).toLocaleString('id-ID')}</p></div><span class="bg-emerald-300 px-2 py-1 border border-black rounded text-[10px]">${rp(h.amount)}</span></div>`).join('') : '<p class="text-xs text-center text-gray-500 py-3">Belum ada riwayat</p>';
+  const hist = sp.history.length ? sp.history.map(h => `<div class="flex justify-between items-center p-2 border-b-2 border-gray-200 text-xs font-bold"><div><p class="font-black">${escapeHtml(h.produk)} <span class="text-[10px] font-normal text-gray-500">(${escapeHtml(h.paket||'')})</span></p><p class="text-[10px] text-gray-400">${wibFull(h.ts)}</p></div><span class="bg-emerald-300 px-2 py-1 border border-black rounded text-[10px]">${rp(h.amount)}</span></div>`).join('') : '<p class="text-xs text-center text-gray-500 py-3">Belum ada riwayat</p>';
   return `<section class="page-enter space-y-4"><h1 class="font-display font-black text-2xl sm:text-4xl flex items-center gap-2"><i class="ph-fill ph-money"></i> TOTAL BELANJA</h1><div class="neo-box-lg bg-yellow-300 p-6 rounded-3xl border-2 border-black text-center"><p class="text-xs font-black uppercase text-black/70 mb-2">Total Pengeluaran</p><p class="font-display font-black text-4xl sm:text-5xl">${rp(sp.total)}</p><p class="text-sm font-bold mt-2">${sp.count} pesanan</p></div><div class="neo-box bg-white rounded-2xl p-4"><h2 class="font-display font-black text-lg mb-2">Riwayat</h2>${hist}</div><button onclick="navigate('/product')" class="w-full neo-btn bg-emerald-300 py-3 rounded-xl font-black text-sm">BELANJA LAGI</button></section>`;
 }
 
@@ -2992,7 +3104,7 @@ function ownerBotHTML(){
   <div id="bot-code-area" class="hidden text-center py-3"><div id="bot-code" onclick="copyBotCode()" class="font-black text-3xl cursor-pointer select-all" style="font-family:'Courier New',monospace;letter-spacing:.15em"></div><p class="text-[11px] font-bold mt-1">Ketuk kode untuk salin • sisa <b id="bot-timer">60</b> detik</p></div></div>
   <div class="neo-box bg-white p-4"><h3 class="font-display font-black text-sm mb-2">Bot Aktif</h3><div id="bot-list" class="text-xs font-bold overflow-x-auto">Memuat...</div></div></div>`;
 }
-const _fmtUntil = (t) => t ? new Date(t).toLocaleString('id-ID') : 'Permanen';
+const _fmtUntil = (t) => t ? wibFull(t) : 'Permanen';
 window.loadBannedList = async function(){
   const box = $('#ban-list'); if(!box) return;
   try {
@@ -3067,7 +3179,7 @@ window.renderBotList = async function(){
   try {
     const r = await apiFetch('/api/bot'); const d = await r.json(); const l = (d && d.data) || [];
     if(!l.length){ box.textContent = 'Belum ada bot terhubung.'; return; }
-    box.innerHTML = '<table class="w-full text-left"><tr><th>Bot</th><th>Terhubung</th><th></th></tr>' + l.map(b => `<tr class="border-t border-black/20"><td class="py-1 pr-2">@${escapeHtml(b.username)}</td><td class="pr-2">${escapeHtml(new Date(b.pairedAt).toLocaleString('id-ID'))}</td><td><button onclick="revokeBot('${escapeHtml(b.username)}')" class="neo-btn bg-red-300 px-2 py-1 rounded text-[10px] font-black">Revoke</button></td></tr>`).join('') + '</table>';
+    box.innerHTML = '<table class="w-full text-left"><tr><th>Bot</th><th>Terhubung</th><th></th></tr>' + l.map(b => `<tr class="border-t border-black/20"><td class="py-1 pr-2">@${escapeHtml(b.username)}</td><td class="pr-2">${escapeHtml(wibFull(b.pairedAt))}</td><td><button onclick="revokeBot('${escapeHtml(b.username)}')" class="neo-btn bg-red-300 px-2 py-1 rounded text-[10px] font-black">Revoke</button></td></tr>`).join('') + '</table>';
   } catch(e){ box.textContent = 'Server tidak terjangkau.'; }
 };
 
@@ -3090,8 +3202,8 @@ window.tambahVoucher = function(){
   const type = $('#v-type').value;
   const value = Number($('#v-value').value);
   const max = Number($('#v-max').value) || 0;
-  if(!code || !value || value <= 0) return toast('Invalid','error');
-  if(type==='percent' && value > 100) return toast('Max 100','error');
+  if(!code || !value || value <= 0) return toast('Tidak valid','error');
+  if(type==='percent' && value > 100) return toast('Maksimal 100','error');
   const v = DB.getVouchers();
   if(v.find(x => x.code === code)) return toast('Ada','error');
   v.push({ code, type, value, maxUses: max, usedCount: 0, active: true });
@@ -3101,27 +3213,30 @@ window.tambahVoucher = function(){
 };
 window.toggleVoucher = function(i){ if(!DB.isOwner()) return; const v = DB.getVouchers(); v[i].active = !v[i].active; DB.saveVouchers(v); render('/owner'); };
 window.hapusVoucher = function(i){ if(!DB.isOwner()) return; if(!confirm('Hapus?')) return; const v = DB.getVouchers(); v.splice(i,1); DB.saveVouchers(v); render('/owner'); };
-window.ubahHarga = function(p, i, v){ if(!DB.isOwner()) return; const n = Number(v); if(isNaN(n) || n < 0) return toast('Invalid','error'); const pr = DB.getPrices(); pr[p+':'+i] = n; DB.savePrices(pr); toast('<i class="ph-fill ph-check-circle"></i> Updated','success'); };
+window.ubahHarga = function(p, i, v){ if(!DB.isOwner()) return; const n = Number(v); if(isNaN(n) || n < 0) return toast('Tidak valid','error'); const pr = DB.getPrices(); pr[p+':'+i] = n; DB.savePrices(pr); toast('<i class="ph-fill ph-check-circle"></i> Updated','success'); };
 window.hapusOrder = function(i){ if(!DB.isOwner()) return; if(!confirm('Hapus?')) return; const o = DB.getOrders(); o.splice(i,1); DB.saveOrders(o); render('/owner'); };
 window.resetOrders = function(){ if(!DB.isOwner()) return; if(!confirm('Reset?')) return; DB.saveOrders([]); render('/owner'); };
 window.resetVisitors = function(){ if(!DB.isOwner()) return; localStorage.setItem('fr_visitors', 0); render('/owner'); };
 window.resetAll = function(){ if(!DB.isOwner()) return; if(!confirm('Yakin?')) return; ['fr_orders','fr_vouchers','fr_prices','fr_visitors','fr_statuses','fr_chat'].forEach(k => localStorage.removeItem(k)); render('/owner'); };
 
 window.bukaOwnerLogin = function(){ tutupSidebar(); bukaModal('#modal-owner-login'); };
-window.handleOwnerLogin = function(e){
+window.handleOwnerLogin = async function(e){
   e.preventDefault();
   const u = $('#owner-username').value.trim();
   const p = $('#owner-password').value;
-  if((u === DEVELOPER.username || u === DEVELOPER.email) && p === DEVELOPER.password){
-    DB.setOwner(true);
+  try {
+    const r = await apiFetch('/api/owner/login', { method: 'POST', body: JSON.stringify({ username: u, password: p }) });
+    const d = await r.json().catch(() => ({}));
+    if(!r.ok || !d.ok){ toast('<i class="ph-fill ph-warning-circle"></i> ' + escapeHtml(d.msg || 'Username atau password salah'), 'error'); return; }
+    Sess.setDev(d.token);
     $('#owner-username').value = '';
     $('#owner-password').value = '';
     tutupModal('#modal-owner-login');
     updateOwnerUI();
     renderSidebarMenu();
-    toast('<i class="ph-fill ph-check-circle"></i> Berhasil!','success');
+    toast('<i class="ph-fill ph-check-circle"></i> Berhasil masuk sebagai developer','success');
     navigate('/owner');
-  } else toast('Salah','error');
+  } catch(err){ toast('<i class="ph-fill ph-warning-circle"></i> Server tidak terjangkau','error'); }
 };
 window.handleOwnerLogout = function(){
   DB.setOwner(false);
@@ -3157,25 +3272,22 @@ function updateOwnerUI(){
   }
 }
 
-window.ubahNama = function(){
-  const user = DB.currentUser(); if(!user) return;
-  const n = $('#new-username').value.trim();
-  if(n.length < 3) return toast('Min 3','error');
-  const us = DB.getUsers();
-  const i = us.findIndex(u => u.email === user.email);
-  if(i >= 0){ us[i].username = n; DB.saveUsers(us); DB.setCurrentUser(us[i]); toast('<i class="ph-fill ph-check-circle"></i> Diubah','success'); render('/profile'); }
-};
-window.ubahPassword = function(){
+window.ubahNama = function(){ toast('<i class="ph-fill ph-info"></i> Username tidak bisa diubah setelah terdaftar','info'); };
+window.ubahPassword = async function(){
   const user = DB.currentUser(); if(!user) return;
   const o = $('#old-pass').value;
   const n = $('#new-pass').value;
   const n2 = $('#new-pass2').value;
-  if(o !== user.pass) return toast('Lama salah','error');
-  if(n.length < 6) return toast('Min 6','error');
-  if(n !== n2) return toast('Tidak cocok','error');
-  const us = DB.getUsers();
-  const i = us.findIndex(u => u.email === user.email);
-  if(i >= 0){ us[i].pass = n; DB.saveUsers(us); DB.setCurrentUser(us[i]); toast('<i class="ph-fill ph-check-circle"></i> Diubah','success'); $('#old-pass').value = ''; $('#new-pass').value = ''; $('#new-pass2').value = ''; }
+  if(!o) return toast('Isi password lama','error');
+  if(n.length < 6) return toast('Password baru minimal 6 karakter','error');
+  if(n !== n2) return toast('Konfirmasi password tidak cocok','error');
+  try {
+    const r = await apiFetch('/api/auth/password', { method: 'POST', body: JSON.stringify({ old: o, next: n }) });
+    const d = await r.json().catch(() => ({}));
+    if(!r.ok || !d.ok) throw new Error(d.msg || 'Gagal mengubah password');
+    toast('<i class="ph-fill ph-check-circle"></i> Password berhasil diubah','success');
+    $('#old-pass').value = ''; $('#new-pass').value = ''; $('#new-pass2').value = '';
+  } catch(err){ toast('<i class="ph-fill ph-warning-circle"></i> ' + escapeHtml(err.message || 'Gagal mengubah password'),'error'); }
 };
 
 let currentVoucher = null, selectedProduk = null, selectedPaketIdx = 0, dataOrder = null;
@@ -3236,7 +3348,7 @@ function updatePriceSummary(){
 window.bukaFormOrder = function(id){
   const isO = DB.isOwner();
   const u = DB.currentUser();
-  if(!u && !isO){ toast('Login dulu','error'); pendingOrderId = id; $('#auth-screen').classList.remove('hidden'); return; }
+  if(!u && !isO){ toast('Login dulu ya','error'); pendingOrderId = id; $('#auth-screen').classList.remove('hidden'); return; }
   selectedProduk = getProduk().find(p => p.id === id);
   if(!selectedProduk) return;
   selectedPaketIdx = 0; currentVoucher = null;
@@ -3289,12 +3401,12 @@ function lanjutKePembayaran(){
   const n = $('#buyer-nama').value.trim();
   const w = $('#buyer-wa').value.trim();
   let i1 = '-', i2 = '-';
-  if(!n){ toast('Isi nama','error'); return; }
-  if(!w){ toast('Isi WA','error'); return; }
+  if(!n){ toast('Isi nama kamu','error'); return; }
+  if(!w){ toast('Isi nomor WhatsApp','error'); return; }
   if(selectedProduk.inputType === 'akun' || selectedProduk.inputType === 'telegram'){
     i1 = $('#order-input-1').value.trim();
     i2 = $('#order-input-2').value.trim();
-    if(!i1 || !i2){ toast('Lengkapi','error'); return; }
+    if(!i1 || !i2){ toast('Lengkapi data pesanan','error'); return; }
   } else if(selectedProduk.inputType !== 'none'){
     i1 = $('#order-input-1').value.trim();
     if(!i1){ toast(selectedProduk.inputLabel + ' wajib','error'); return; }
@@ -3314,7 +3426,13 @@ function lanjutQRIS(){
   $('#pay-produk').textContent = dataOrder.produk;
   $('#pay-paket').textContent = dataOrder.paket;
   countUp($('#pay-total'), dataOrder.bayar, true);
-  $('#img-qris').src = ENV.QRIS_IMAGE;
+  const qi = $('#img-qris'), qfb = $('#qris-fallback');
+  if(qi){
+    qi.onload = () => { qi.style.display = 'block'; if(qfb) qfb.style.display = 'none'; };
+    qi.onerror = () => { qi.style.display = 'none'; if(qfb) qfb.style.display = 'flex'; };
+    qi.style.display = 'block'; if(qfb) qfb.style.display = 'none';
+    if(ENV.QRIS_IMAGE) qi.src = ENV.QRIS_IMAGE + (String(ENV.QRIS_IMAGE).startsWith('data:') ? '' : ''); else qi.onerror();
+  }
   if(dataOrder.diskon > 0){ $('#pay-voucher-row').style.display = 'flex'; $('#pay-voucher').textContent = dataOrder.voucher + ' (-' + rp(dataOrder.diskon) + ')'; }
   else $('#pay-voucher-row').style.display = 'none';
   tutupModal('#modal-metode-bayar');
@@ -3324,9 +3442,9 @@ function lanjutQRIS(){
 async function prosesSelesai(){
   if(!dataOrder) return;
   const user = DB.currentUser() || { email: 'dev@satriareal.com' };
-  const now = new Date();
-  const tgl = now.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
-  const wkt = now.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}) + ' WIB';
+  // Jam diambil dari jam server (WIB), bukan jam HP, jadi pesan ke WhatsApp admin selalu cocok dengan waktu order
+  const tgl = wibFmt(null,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const wkt = wibTime() + ' WIB';
   let msg = 'hay bang satria\n\nsaya habis order *' + dataOrder.produk + '*\n\n━━━━━━━━━━━━━━━━\n  paket      : *' + dataOrder.paket + '*\n  harga asli : *' + rp(dataOrder.hargaAsli) + '*\n';
   if(dataOrder.diskon > 0) msg += '  voucher    : *' + dataOrder.voucher + '* (-' + rp(dataOrder.diskon) + ')\n';
   msg += '  total bayar: *' + rp(dataOrder.bayar) + '*\n  tanggal    : *' + tgl + '*\n  waktu      : *' + wkt + '*\n';
@@ -3339,6 +3457,7 @@ async function prosesSelesai(){
   const newOrder = { email: user.email, nama: dataOrder.nama, wa: dataOrder.wa, produk: dataOrder.produk, paket: dataOrder.paket, hargaAsli: dataOrder.hargaAsli, diskon: dataOrder.diskon, voucher: dataOrder.voucher, bayar: dataOrder.bayar, tanggal: tgl + ' ' + wkt };
   orders.unshift(newOrder);
   DB.saveOrders(orders);
+  apiFetch('/api/orders', { method: 'POST', body: JSON.stringify(newOrder) }).then(r => r.json()).then(d => { if(d && d.ok && d.spending){ const t = document.getElementById('profile-spending-total'); if(t) t.textContent = rp(d.spending.total); } }).catch(() => {});
   const myOrd = DB.getOrders().filter(o => o.email === user.email);
   const spending = { total: myOrd.reduce((s, o) => s + Number(o.bayar||0), 0), count: myOrd.length };
   if(dataOrder.voucher){ const v = DB.getVouchers(); const i = v.findIndex(x => x.code === dataOrder.voucher); if(i >= 0){ v[i].usedCount = (v[i].usedCount||0) + 1; DB.saveVouchers(v); } }
@@ -3543,7 +3662,7 @@ function setWeatherUI(icon, temp, desc){
   if(a) a.textContent = icon; if(b) b.textContent = temp + '°C'; if(c) c.textContent = desc;
 }
 async function loadWeather(){
-  const h = new Date().getHours();
+  const h = Number(wibParts().hour);
   const mock = () => setWeatherUI(weatherIconFromHour(h), 27, weatherDescFromHour(h));
   try {
     const key = window.__WEATHER_KEY__;
@@ -3564,15 +3683,15 @@ window.loadWeather = loadWeather;
 function initClock(){
   if(clockInterval) clearInterval(clockInterval);
   const u = () => {
-    const n = new Date();
-    const d = String(n.getDate()).padStart(2,'0');
-    const mo = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Ags","Sep","Okt","Nov","Des"][n.getMonth()];
-    const h = String(n.getHours()).padStart(2,'0');
-    const mm = String(n.getMinutes()).padStart(2,'0');
-    const s = String(n.getSeconds()).padStart(2,'0');
+    const n = wibParts();
+    const d = n.day;
+    const mo = ["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Ags","Sep","Okt","Nov","Des"][Number(n.month) - 1];
+    const h = n.hour;
+    const mm = n.minute;
+    const s = n.second;
     const ed = $('#live-date');
     const et = $('#live-time');
-    if(ed) ed.textContent = `${d} ${mo} ${n.getFullYear()}`;
+    if(ed) ed.textContent = `${d} ${mo} ${n.year}`;
     if(et){
       et.innerHTML = `<span>${h}</span><span class="colon">:</span><span>${mm}</span><span class="colon">:</span><span class="sec">${s}</span>`;
       et.classList.remove('tick');
@@ -3598,7 +3717,7 @@ window.toggleMusic = function(){
         if(l) l.textContent = 'Jeda Musik';
         if(i) i.innerHTML = '<rect x="6" y="5" width="4" height="14"></rect><rect x="14" y="5" width="4" height="14"></rect>';
         toast('<i class="ph-fill ph-play"></i> Musik diputar','success');
-      }).catch(() => toast('Gagal putar','error'));
+      }).catch(() => toast('Gagal memutar','error'));
     } else {
       a.pause();
       isMusicPlaying = false;
@@ -3606,7 +3725,7 @@ window.toggleMusic = function(){
       if(i) i.innerHTML = '<path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle>';
       toast('<i class="ph-fill ph-pause"></i> Dijeda','success');
     }
-  } catch(e){ toast('Error musik','error'); }
+  } catch(e){ toast('Gagal memutar musik','error'); }
 };
 
 function initEvents(){
@@ -3648,6 +3767,18 @@ function initEvents(){
 
 async function boot(){
   try { await loadConfig(); } catch(e){ SERVER_ONLINE = false; }
+  try {
+    // Migrasi: akun lama hanya ada di localStorage (termasuk password polos). Hapus data sensitif; login ulang lewat server.
+    if(!localStorage.getItem('fr_migrated_v3')){
+      DB.saveUsers(DB.getUsers().map(u => ({ username: u.username, avatar: u.avatar || null })));
+      localStorage.removeItem('fr_owner'); localStorage.removeItem('fr_current_user'); localStorage.setItem('fr_migrated_v3', '1');
+    }
+    if(DB.currentUser() && !Sess.user()) DB.logout();
+    if(Sess.user() && SERVER_ONLINE){
+      const r = await apiFetch('/api/auth/me'); const d = await r.json().catch(() => ({}));
+      if(r.ok && d.ok && d.user){ DB.setCurrentUser(d.user); rememberUser(d.user); }
+    }
+  } catch(e){}
   const hn = $('#header-toko-nama'); if(hn && ENV.NAMA_TOKO) hn.textContent = ENV.NAMA_TOKO;
   setTimeout(() => { const l = $('#loading-screen'); if(l){ l.classList.add('fade-out'); setTimeout(() => { try{ l.remove(); }catch(_){} }, 550); } }, 1200);
   let t = 'kuning'; try { t = localStorage.getItem('fallreal_theme') || 'kuning'; } catch(e){}

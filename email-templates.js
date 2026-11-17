@@ -5,8 +5,11 @@ const BRAND = {
   year: new Date().getFullYear() 
 };
 
+const esc = (v) => String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
 function otpEmailHTML({ code, email, expiryMin = 5, name = 'Kak' }) {
-  const digits = String(code).split('');
+  email = esc(email); name = esc(name);
+  const digits = String(code).replace(/\D/g, '').split('');
   const digitCells = digits.map((d, i) => `
     <td align="center" valign="middle" class="digit"
         style="width:48px;height:60px;background:#ffffff;
